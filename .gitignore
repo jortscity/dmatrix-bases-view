@@ -1,3 +1,4 @@
 node_modules/
 .vault-path
+deploy.sh
 main.js

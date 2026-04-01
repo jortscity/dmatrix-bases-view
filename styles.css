@@ -215,14 +215,18 @@
 }
 
 /* ── Weight inputs ─────────────────────────────────────────── */
+.dmv-th-weight--compact {
+	padding: 2px 4px;
+}
+
 .dmv-weight-input {
-	width: 50px;
+	width: 48px;
 	padding: 2px 4px;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-s);
 	background: var(--background-primary);
 	color: var(--text-normal);
-	font-size: 11px;
+	font-size: 0.85em;
 	text-align: center;
 }
 
@@ -414,4 +418,222 @@
 .markdown-embed .dmv-embed-hint {
 	font-size: 11px;
 	padding: 5px 8px;
+}
+
+/* ── Vertical column dividers (Feature 4) ──────────────────── */
+.dmv-table .dmv-td,
+.dmv-table .dmv-th {
+	border-right: 1px solid var(--background-modifier-border);
+}
+
+.dmv-table .dmv-td:last-child,
+.dmv-table .dmv-th:last-child {
+	border-right: none;
+}
+
+/* ── Row group headers (Feature 5) ────────────────────────── */
+.dmv-group-header td {
+	background: var(--background-secondary);
+	font-weight: 600;
+	padding: 4px 8px;
+	cursor: pointer;
+	user-select: none;
+}
+
+.dmv-group-caret {
+	margin-right: 6px;
+	display: inline-block;
+	font-size: 0.75em;
+}
+
+/* ============================================================
+   Decision Matrix Rankings View
+   ============================================================ */
+
+.dmr-root {
+	display: flex;
+	flex-direction: column;
+	font-size: var(--font-ui-small);
+	color: var(--text-normal);
+}
+
+.dmr-body {
+	padding: 10px 12px;
+}
+
+/* ── Podium ────────────────────────────────────────────────── */
+.dmr-podium {
+	display: flex;
+	align-items: flex-end;
+	gap: 6px;
+	margin-bottom: 10px;
+}
+
+.dmr-pedestal {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+}
+
+/* Platform base below each card */
+.dmr-pedestal::after {
+	content: '';
+	display: block;
+	width: 100%;
+	border-radius: 0 0 var(--radius-s) var(--radius-s);
+}
+
+.dmr-pedestal--1st::after {
+	height: 26px;
+	background: var(--interactive-accent);
+	opacity: 0.75;
+}
+
+.dmr-pedestal--2nd::after {
+	height: 18px;
+	background: color-mix(in srgb, var(--interactive-accent) 55%, var(--background-modifier-border));
+}
+
+.dmr-pedestal--3rd::after {
+	height: 12px;
+	background: color-mix(in srgb, var(--interactive-accent) 30%, var(--background-modifier-border));
+}
+
+/* ── Cards ─────────────────────────────────────────────────── */
+.dmr-card {
+	padding: 6px;
+	border: 1px solid var(--background-modifier-border);
+	border-bottom: none;
+	border-radius: var(--radius-s) var(--radius-s) 0 0;
+	background: var(--background-primary);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	min-width: 0;
+}
+
+.dmr-pedestal--1st .dmr-card {
+	border-color: var(--interactive-accent);
+}
+
+.dmr-card-cover {
+	width: 40px;
+	height: 40px;
+	object-fit: cover;
+	border-radius: var(--radius-s);
+	flex-shrink: 0;
+}
+
+.dmr-card-rank {
+	font-size: 1.05em;
+	font-weight: 700;
+	color: var(--interactive-accent);
+	line-height: 1;
+}
+
+.dmr-card-title {
+	font-size: var(--font-ui-smaller);
+	font-weight: 500;
+	text-align: center;
+	width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	cursor: pointer;
+	color: var(--link-color, var(--text-accent));
+}
+
+.dmr-card-title:hover {
+	text-decoration: underline;
+}
+
+/* ── Score bar (shared by cards and list rows) ─────────────── */
+.dmr-bar-wrap,
+.dmr-list-bar-wrap {
+	width: 100%;
+	height: 4px;
+	background: var(--background-modifier-border);
+	border-radius: 2px;
+	overflow: hidden;
+	flex-shrink: 0;
+}
+
+.dmr-list-bar-wrap {
+	width: 36px;
+}
+
+.dmr-bar {
+	height: 100%;
+	background: var(--interactive-accent);
+	border-radius: 2px;
+	min-width: 2px;
+}
+
+/* ── List (4th+) ───────────────────────────────────────────── */
+.dmr-list {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 4px;
+}
+
+.dmr-list-item {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	padding: 4px 6px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-secondary);
+	min-width: 0;
+}
+
+.dmr-list-rank {
+	font-weight: 700;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	flex-shrink: 0;
+	min-width: 22px;
+}
+
+.dmr-list-cover {
+	width: 24px;
+	height: 24px;
+	object-fit: cover;
+	border-radius: 3px;
+	flex-shrink: 0;
+}
+
+.dmr-list-title {
+	flex: 1;
+	font-size: var(--font-ui-smaller);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	cursor: pointer;
+	color: var(--link-color, var(--text-accent));
+}
+
+.dmr-list-title:hover {
+	text-decoration: underline;
+}
+
+/* ── Narrow embed overrides ────────────────────────────────── */
+.markdown-embed .dmr-body {
+	padding: 6px 8px;
+}
+
+.markdown-embed .dmr-card-cover {
+	width: 32px;
+	height: 32px;
+}
+
+.markdown-embed .dmr-list {
+	gap: 3px;
+}
+
+.markdown-embed .dmr-list-item {
+	padding: 3px 5px;
 }

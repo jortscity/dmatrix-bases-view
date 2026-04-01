@@ -1,7 +1,7 @@
 /**
  * DOM scaffold and table rendering for the decision matrix view.
  */
-import type { DecisionItem, ScoreScale } from './types.ts';
+import type { DecisionItem, ItemGroup, ScoreScale } from './types.ts';
 
 export interface MatrixScaffold {
 	toolbar: HTMLElement;
@@ -23,11 +23,14 @@ export function buildMatrixScaffold(container: HTMLElement): MatrixScaffold {
  */
 export function renderRawTable(
 	container: HTMLElement,
-	items: DecisionItem[],
+	groups: ItemGroup[],
 	criteria: string[],
 	scale: ScoreScale,
 	onScoreEdit: (item: DecisionItem, criterion: string, newValue: number) => void,
 	onItemClick: (item: DecisionItem) => void,
+	scorePrefix?: string,
+	collapsedGroups?: Set<string>,
+	onToggleGroup?: (key: string) => void,
 ): void {
 	container.createEl('h3', { text: 'Raw Scores', cls: 'dmv-section-title' });
 
@@ -38,25 +41,49 @@ export function renderRawTable(
 	const headerRow = thead.createEl('tr');
 	headerRow.createEl('th', { text: 'Item', cls: 'dmv-th dmv-th-item' });
 	for (const c of criteria) {
-		headerRow.createEl('th', { text: formatCriterionName(c), cls: 'dmv-th dmv-th-criterion' });
+		headerRow.createEl('th', { text: formatCriterionName(c, scorePrefix), cls: 'dmv-th dmv-th-criterion' });
 	}
 	headerRow.createEl('th', { text: `/ ${scale}`, cls: 'dmv-th dmv-th-scale' });
 
 	const tbody = table.createEl('tbody');
-	for (const item of items) {
-		const tr = tbody.createEl('tr', { cls: 'dmv-row' });
 
-		const nameTd = tr.createEl('td', { cls: 'dmv-td dmv-td-item dmv-td-link' });
-		nameTd.textContent = item.title;
-		nameTd.addEventListener('click', () => onItemClick(item));
+	for (const group of groups) {
+		const hasGroupKey = group.key !== '';
+		const isCollapsed = hasGroupKey && (collapsedGroups?.has(group.key) ?? false);
 
-		for (const c of criteria) {
-			const score = item.scores[c] ?? 0;
-			const td = tr.createEl('td', { cls: 'dmv-td dmv-td-score dmv-td-editable' });
-			renderEditableScore(td, score, scale, (newVal) => onScoreEdit(item, c, newVal));
+		// Render group header row for named groups
+		if (hasGroupKey) {
+			const groupTr = tbody.createEl('tr', { cls: 'dmv-group-header' });
+			const groupTd = groupTr.createEl('td', {
+				attr: { colspan: String(criteria.length + 2) },
+			});
+			const caret = groupTd.createEl('span', {
+				cls: 'dmv-group-caret',
+				text: isCollapsed ? '▶' : '▼',
+			});
+			groupTd.appendChild(document.createTextNode(group.key));
+			groupTr.addEventListener('click', () => {
+				if (onToggleGroup) onToggleGroup(group.key);
+			});
 		}
 
-		tr.createEl('td', { cls: 'dmv-td dmv-td-scale' });
+		if (isCollapsed) continue;
+
+		for (const item of group.items) {
+			const tr = tbody.createEl('tr', { cls: 'dmv-row' });
+
+			const nameTd = tr.createEl('td', { cls: 'dmv-td dmv-td-item dmv-td-link' });
+			nameTd.textContent = item.title;
+			nameTd.addEventListener('click', () => onItemClick(item));
+
+			for (const c of criteria) {
+				const score = item.scores[c] ?? null;
+				const td = tr.createEl('td', { cls: 'dmv-td dmv-td-score dmv-td-editable' });
+				renderEditableScore(td, score, scale, (newVal) => onScoreEdit(item, c, newVal));
+			}
+
+			tr.createEl('td', { cls: 'dmv-td dmv-td-scale' });
+		}
 	}
 }
 
@@ -66,13 +93,13 @@ export function renderRawTable(
  */
 function renderEditableScore(
 	td: HTMLElement,
-	score: number,
+	score: number | null,
 	scale: ScoreScale,
 	onCommit: (value: number) => void,
 ): void {
 	td.empty();
-	td.createEl('span', { text: String(score), cls: 'dmv-score-display' });
-	colorScoreCell(td, score, scale);
+	td.createEl('span', { text: score === null ? '' : String(score), cls: 'dmv-score-display' });
+	if (score !== null) colorScoreCell(td, score, scale);
 
 	td.addEventListener('click', () => {
 		if (td.querySelector('input')) return;
@@ -85,14 +112,21 @@ function renderEditableScore(
 			type: 'number',
 			attr: { min: '0', step: '1' },
 		});
-		input.value = String(score);
+		input.value = score === null ? '' : String(score);
 		input.select();
 
 		const commit = () => {
 			const v = parseFloat(input.value);
-			const val = isNaN(v) ? score : Math.max(0, Math.round(v));
+			if (isNaN(v)) {
+				// Blank input — restore previous display without writing
+				td.classList.remove('dmv-td--editing');
+				td.empty();
+				td.createEl('span', { text: score === null ? '' : String(score), cls: 'dmv-score-display' });
+				if (score !== null) colorScoreCell(td, score, scale);
+				return;
+			}
+			const val = Math.max(0, Math.round(v));
 			td.classList.remove('dmv-td--editing');
-			// Restore display immediately so cell isn't blank while async write completes
 			td.empty();
 			td.createEl('span', { text: String(val), cls: 'dmv-score-display' });
 			colorScoreCell(td, val, scale);
@@ -105,8 +139,8 @@ function renderEditableScore(
 			if (e.key === 'Escape') {
 				td.classList.remove('dmv-td--editing');
 				td.empty();
-				td.createEl('span', { text: String(score), cls: 'dmv-score-display' });
-				colorScoreCell(td, score, scale);
+				td.createEl('span', { text: score === null ? '' : String(score), cls: 'dmv-score-display' });
+				if (score !== null) colorScoreCell(td, score, scale);
 			}
 		});
 
@@ -120,13 +154,16 @@ function renderEditableScore(
  */
 export function renderWeightedTable(
 	container: HTMLElement,
-	items: DecisionItem[],
+	groups: ItemGroup[],
 	criteria: string[],
 	scale: ScoreScale,
 	weights: Record<string, number>,
 	weightsFromNote: boolean,
 	onWeightChange: (criterion: string, value: number) => void,
 	onItemClick: (item: DecisionItem) => void,
+	scorePrefix?: string,
+	collapsedGroups?: Set<string>,
+	onToggleGroup?: (key: string) => void,
 ): void {
 	container.createEl('h3', { text: 'Weighted Scores', cls: 'dmv-section-title' });
 
@@ -138,15 +175,19 @@ export function renderWeightedTable(
 	const nameRow = thead.createEl('tr');
 	nameRow.createEl('th', { text: 'Item', cls: 'dmv-th dmv-th-item', attr: { rowspan: '2' } });
 	for (const c of criteria) {
-		nameRow.createEl('th', { text: formatCriterionName(c), cls: 'dmv-th dmv-th-criterion' });
+		nameRow.createEl('th', { text: formatCriterionName(c, scorePrefix), cls: 'dmv-th dmv-th-criterion' });
 	}
-	nameRow.createEl('th', { text: 'Weighted Avg', cls: 'dmv-th dmv-th-avg', attr: { rowspan: '2' } });
+	nameRow.createEl('th', {
+		text: 'W.A.',
+		cls: 'dmv-th dmv-th-avg',
+		attr: { title: 'Weighted average. Formula: Σ(score × weight) / Σ|weight|', rowspan: '2' },
+	});
 	nameRow.createEl('th', { text: 'Rank', cls: 'dmv-th dmv-th-rank', attr: { rowspan: '2' } });
 
 	// Row 2: weight inputs
 	const weightRow = thead.createEl('tr', { cls: 'dmv-weight-row-header' });
 	for (const c of criteria) {
-		const wTh = weightRow.createEl('th', { cls: 'dmv-th dmv-th-weight' });
+		const wTh = weightRow.createEl('th', { cls: 'dmv-th dmv-th-weight dmv-th-weight--compact' });
 		const input = wTh.createEl('input', {
 			cls: 'dmv-weight-input',
 			type: 'number',
@@ -154,6 +195,7 @@ export function renderWeightedTable(
 		});
 		input.value = String(weights[c] ?? 1);
 		if (weightsFromNote) {
+			const displayName = formatCriterionName(c, scorePrefix);
 			input.title = `From note: weight_${c}. Edit here to override for this session.`;
 		}
 		input.addEventListener('change', () => {
@@ -163,7 +205,9 @@ export function renderWeightedTable(
 	}
 
 	// Compute ranks — standard competition ranking (ties share the same rank)
-	const weightedAvgs = items.map(item => ({
+	// Flatten all items across groups for ranking purposes
+	const allItems = groups.flatMap(g => g.items);
+	const weightedAvgs = allItems.map(item => ({
 		item,
 		avg: computeWeightedAvg(item, criteria, weights),
 	}));
@@ -188,31 +232,55 @@ export function renderWeightedTable(
 
 	// Data rows
 	const tbody = table.createEl('tbody');
-	for (const item of items) {
-		const tr = tbody.createEl('tr', { cls: 'dmv-row' });
-		const rank = rankMap.get(item.id) ?? 0;
-		if (rank <= 3) tr.classList.add(`dmv-row--rank-${rank}`);
 
-		const nameTd = tr.createEl('td', { cls: 'dmv-td dmv-td-item dmv-td-link' });
-		nameTd.textContent = item.title;
-		nameTd.addEventListener('click', () => onItemClick(item));
+	for (const group of groups) {
+		const hasGroupKey = group.key !== '';
+		const isCollapsed = hasGroupKey && (collapsedGroups?.has(group.key) ?? false);
 
-		for (const c of criteria) {
-			const score = item.scores[c] ?? 0;
-			const w = weights[c] ?? 1;
-			const weighted = round2(score * w);
-			const td = tr.createEl('td', { text: String(weighted), cls: 'dmv-td dmv-td-score' });
-			colorScoreCell(td, score, scale);
+		// Render group header row for named groups
+		if (hasGroupKey) {
+			const groupTr = tbody.createEl('tr', { cls: 'dmv-group-header' });
+			const groupTd = groupTr.createEl('td', {
+				attr: { colspan: String(criteria.length + 3) },
+			});
+			const caret = groupTd.createEl('span', {
+				cls: 'dmv-group-caret',
+				text: isCollapsed ? '▶' : '▼',
+			});
+			groupTd.appendChild(document.createTextNode(group.key));
+			groupTr.addEventListener('click', () => {
+				if (onToggleGroup) onToggleGroup(group.key);
+			});
 		}
 
-		const avg = computeWeightedAvg(item, criteria, weights);
-		const avgTd = tr.createEl('td', { text: to2SigFigs(avg), cls: 'dmv-td dmv-td-avg' });
-		colorScoreCell(avgTd, avg, scale);
+		if (isCollapsed) continue;
 
-		const isTied = tieMap.get(item.id) ?? false;
-		const rankLabel = isTied ? `=${rank}` : `#${rank}`;
-		const rankTd = tr.createEl('td', { text: rankLabel, cls: 'dmv-td dmv-td-rank' });
-		if (rank <= 3) rankTd.classList.add(`dmv-rank--top-${rank}`);
+		for (const item of group.items) {
+			const tr = tbody.createEl('tr', { cls: 'dmv-row' });
+			const rank = rankMap.get(item.id) ?? 0;
+			if (rank <= 3) tr.classList.add(`dmv-row--rank-${rank}`);
+
+			const nameTd = tr.createEl('td', { cls: 'dmv-td dmv-td-item dmv-td-link' });
+			nameTd.textContent = item.title;
+			nameTd.addEventListener('click', () => onItemClick(item));
+
+			for (const c of criteria) {
+				const score = item.scores[c] ?? 0;
+				const w = weights[c] ?? 1;
+				const weighted = round2(score * w);
+				const td = tr.createEl('td', { text: String(weighted), cls: 'dmv-td dmv-td-score' });
+				colorScoreCell(td, score, scale);
+			}
+
+			const avg = computeWeightedAvg(item, criteria, weights);
+			const avgTd = tr.createEl('td', { text: to2SigFigs(avg), cls: 'dmv-td dmv-td-avg' });
+			colorScoreCell(avgTd, avg, scale);
+
+			const isTied = tieMap.get(item.id) ?? false;
+			const rankLabel = isTied ? `=${rank}` : `#${rank}`;
+			const rankTd = tr.createEl('td', { text: rankLabel, cls: 'dmv-td dmv-td-rank' });
+			if (rank <= 3) rankTd.classList.add(`dmv-rank--top-${rank}`);
+		}
 	}
 }
 
@@ -246,8 +314,12 @@ function to2SigFigs(n: number): string {
 	return Number(n.toPrecision(2)).toString();
 }
 
-export function formatCriterionName(name: string): string {
-	return name
+export function formatCriterionName(name: string, prefix?: string): string {
+	let n = name;
+	if (prefix && n.startsWith(prefix)) {
+		n = n.slice(prefix.length);
+	}
+	return n
 		.replace(/[_-]/g, ' ')
 		.replace(/([a-z])([A-Z])/g, '$1 $2')
 		.replace(/\b\w/g, c => c.toUpperCase());

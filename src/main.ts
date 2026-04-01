@@ -1,5 +1,6 @@
 import { Plugin, PluginSettingTab, App, Setting, Notice } from 'obsidian';
 import { DecisionMatrixView } from './matrix-view.ts';
+import { DecisionMatrixRankingsView } from './rankings-view.ts';
 import { getViewOptions } from './options.ts';
 import type { PluginSettings } from './types.ts';
 import { DEFAULT_PLUGIN_SETTINGS } from './types.ts';
@@ -14,6 +15,12 @@ export default class DecisionMatrixPlugin extends Plugin {
 			name: 'Decision Matrix',
 			icon: 'scale',
 			factory: (controller, containerEl) => new DecisionMatrixView(controller, containerEl, this),
+			options: (config) => getViewOptions(config),
+		});
+		this.registerBasesView('decision-matrix-rankings', {
+			name: 'Decision Matrix Rankings',
+			icon: 'award',
+			factory: (controller, containerEl) => new DecisionMatrixRankingsView(controller, containerEl, this),
 			options: (config) => getViewOptions(config),
 		});
 		this.addSettingTab(new DecisionMatrixSettingsTab(this.app, this));
@@ -56,6 +63,18 @@ class DecisionMatrixSettingsTab extends PluginSettingTab {
 					this.plugin.settings.scale = Number(value) as 5 | 10 | 100;
 					await this.plugin.saveSettings();
 				});
+			});
+
+		new Setting(containerEl)
+			.setName('Score prefix')
+			.setDesc("Strip this prefix from property names before display (e.g. 'score_'). Leave blank to disable.")
+			.addText(text => {
+				text.setPlaceholder('e.g. score_')
+					.setValue(this.plugin.settings.scorePrefix)
+					.onChange(async (value) => {
+						this.plugin.settings.scorePrefix = value;
+						await this.plugin.saveSettings();
+					});
 			});
 
 		containerEl.createEl('p', {

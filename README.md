@@ -1,33 +1,31 @@
 # Decision Matrix Bases View
 
-A custom [Obsidian Bases](https://help.obsidian.md/bases) view that turns your notes into a weighted decision matrix — score options across criteria, apply weights, and get ranked results.
+A custom [Obsidian Bases](https://help.obsidian.md/bases) view for weighted decision-making. Score options across criteria, set weights, get ranked results.
 
 ## Features
 
-- **Raw scores table** — inline editable scores written back to note frontmatter
-- **Weighted scores table** — per-criterion weights with a weighted average and rank (#1 / #2 / #3 highlights, tie detection)
-- **Weight pre-fill** — embed the base in a note with `weight_<criterion>: N` frontmatter and weights load automatically
-- **Per-criterion normalization** — scales down only the criteria whose values exceed the target scale
-- **Negative weights** — penalize criteria by entering a negative weight
-- **Scale toggle** — switch between /5, /10, and /100 scoring in the toolbar
-- **Click-to-open** — click a note name to open it
+- **Two view types** — `decision-matrix` (full scoring table) and `decision-matrix-rankings` (podium + ranked card list)
+- **Inline score editing** — click any cell to edit; written back to frontmatter immediately
+- **Weighted scoring** — per-criterion weights, weighted average, ranked rows with tie detection
+- **Blank vs. zero** — unset scores display blank; explicit 0 is a deliberate judgment. Both treat as 0 in calculations.
+- **Weight pre-fill** — add `weight_<criterion>: N` to the embedding note's frontmatter; weights load on open and reset via the ↺ button
+- **Negative weights** — penalize criteria; denominator uses `Σ|weight|` so scale stays consistent
+- **Score prefix stripping** — set a prefix (e.g. `score_`) in settings to strip it from display names
+- **Per-criterion normalization** — scales only criteria whose max exceeds the target scale
+- **Row grouping** — uses Bases native grouping; groups are collapsible
+- **Scale toggle** — /5, /10, /100
 
 ## Requirements
 
-- Obsidian **1.9.10+** (Bases support required)
+Obsidian **1.9.10+** (Bases required)
 
 ## Installation
 
-Install via [BRAT](https://github.com/TfTHacker/obsidian42-brat):
+Via [BRAT](https://github.com/TfTHacker/obsidian42-brat): add `jortscity/dmatrix-bases-view` as a beta plugin.
 
-1. Install and enable the BRAT plugin from the Obsidian Community plugins
-2. In BRAT settings, click **Add Beta plugin**
-3. Enter `jortscity/dmatrix-bases-view`
-4. Enable the plugin in Settings → Community plugins
+## Setup
 
-## Usage
-
-### 1. Create a base
+### Base file
 
 ```yaml
 views:
@@ -45,9 +43,9 @@ views:
       - quality
 ```
 
-Each property in `order` that has numeric values on the queried notes becomes a scoring criterion.
+Any property in `order` with numeric values becomes a scoring criterion.
 
-### 2. Add scores to notes
+### Scores
 
 ```yaml
 ---
@@ -58,9 +56,9 @@ quality: 9
 ---
 ```
 
-### 3. Set weights (optional)
+### Weights
 
-Embed the base in a note and add `weight_<criterion>` properties to that note's frontmatter:
+Embed the base in a note and add `weight_<criterion>` properties:
 
 ```yaml
 ---
@@ -72,21 +70,25 @@ weight_quality: 4
 ![[my-decision.base]]
 ```
 
-Weights load automatically when the base is viewed from that note. Use the reload button (↺) in the toolbar to refresh them. Weights are session-only and never persisted.
+Weights are session-only. Edit them live in the view, or hit ↺ to reload from frontmatter.
 
-### Settings
+### Rankings view
 
-- **Default scale** — sets the scoring scale for new views (5, 10, or 100)
-- **Create examples** — generates sample laptop-comparison notes to explore the view
+Same setup, different view type:
 
-## Building from source
+```yaml
+views:
+  - type: decision-matrix-rankings
+```
+
+Add a `cover` URL property to notes for thumbnail images in the podium cards.
+
+## Building
 
 ```bash
 npm install
 npm run build
 ```
-
-The built `main.js` is output to the project root.
 
 ## License
 

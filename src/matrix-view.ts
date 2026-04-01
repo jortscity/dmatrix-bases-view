@@ -16,6 +16,7 @@ export class DecisionMatrixView extends BasesView {
 	// frontmatter on first use of each criterion; overridable by the user at any time.
 	private _weights: Record<string, number> = {};
 	private _weightsFromNote = false;
+	private _collapsedGroups: Set<string> = new Set();
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: DecisionMatrixPlugin) {
 		super(controller);
@@ -78,18 +79,30 @@ export class DecisionMatrixView extends BasesView {
 		// Toolbar
 		this._renderToolbar(toolbar, items, criteria, scale, () => this._reloadWeightsFromNote(criteria));
 
+		const scorePrefix = this.plugin.settings.scorePrefix;
+
 		// Raw scores table
-		renderRawTable(rawSection, items, criteria, scale,
+		renderRawTable(rawSection, groups, criteria, scale,
 			async (item, criterion, newVal) => {
 				await this.app.fileManager.processFrontMatter(item.file, (fm: Record<string, unknown>) => {
 					fm[criterion] = newVal;
 				});
 			},
 			(item) => this._openNote(item),
+			scorePrefix,
+			this._collapsedGroups,
+			(key) => {
+				if (this._collapsedGroups.has(key)) {
+					this._collapsedGroups.delete(key);
+				} else {
+					this._collapsedGroups.add(key);
+				}
+				this._render();
+			},
 		);
 
 		// Weighted scores table
-		renderWeightedTable(weightedSection, items, criteria, scale,
+		renderWeightedTable(weightedSection, groups, criteria, scale,
 			this._weights,
 			weightsFromNote,
 			(criterion, value) => {
@@ -97,6 +110,16 @@ export class DecisionMatrixView extends BasesView {
 				this._render();
 			},
 			(item) => this._openNote(item),
+			scorePrefix,
+			this._collapsedGroups,
+			(key) => {
+				if (this._collapsedGroups.has(key)) {
+					this._collapsedGroups.delete(key);
+				} else {
+					this._collapsedGroups.add(key);
+				}
+				this._render();
+			},
 		);
 	}
 

@@ -6,7 +6,7 @@ export interface DecisionItem {
 	id: string;
 	file: TFile;
 	title: string;
-	scores: Record<string, number>;  // criterion name → raw score
+	scores: Record<string, number | null>;  // criterion name → raw score; null = not set
 	entry: BasesEntry;
 }
 
@@ -17,10 +17,12 @@ export interface ItemGroup {
 
 export interface PluginSettings {
 	scale: ScoreScale;
+	scorePrefix: string;
 }
 
 export const DEFAULT_PLUGIN_SETTINGS: PluginSettings = {
 	scale: 10,
+	scorePrefix: '',
 };
 
 export const ROW_HEIGHT = 36;

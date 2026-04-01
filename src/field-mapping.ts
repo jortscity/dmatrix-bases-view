@@ -51,15 +51,15 @@ export function extractItem(
 		parseString(entry.getValue('note.title' as BasesPropertyId)) ||
 		entry.file.basename;
 
-	const scores: Record<string, number> = {};
+	const scores: Record<string, number | null> = {};
 	for (const c of criteria) {
 		const val = entry.getValue(`note.${c}` as BasesPropertyId);
 		if (val == null) {
-			scores[c] = 0;
+			scores[c] = null;
 			continue;
 		}
 		const num = Number(val);
-		scores[c] = isNaN(num) ? 0 : num;
+		scores[c] = isNaN(num) ? null : num;
 	}
 
 	return {

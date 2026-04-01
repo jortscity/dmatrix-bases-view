@@ -18,11 +18,12 @@ A custom [Obsidian Bases](https://help.obsidian.md/bases) view that turns your n
 
 ## Installation
 
-### Manual
+Install via [BRAT](https://github.com/TfTHacker/obsidian42-brat):
 
-1. Download `main.js`, `styles.css`, and `manifest.json` from the [latest release](https://github.com/jortscity/dmatrix-bases-view/releases/latest)
-2. Copy them to `.obsidian/plugins/decision-matrix-bases-view/` in your vault
-3. Enable the plugin in Settings → Community plugins
+1. Install and enable the BRAT plugin from the Obsidian Community plugins
+2. In BRAT settings, click **Add Beta plugin**
+3. Enter `jortscity/dmatrix-bases-view`
+4. Enable the plugin in Settings → Community plugins
 
 ## Usage
 

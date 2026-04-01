@@ -1,0 +1,263 @@
+/**
+ * DOM scaffold and table rendering for the decision matrix view.
+ */
+import type { DecisionItem, ScoreScale } from './types.ts';
+
+export interface MatrixScaffold {
+	toolbar: HTMLElement;
+	body: HTMLElement;
+	rawSection: HTMLElement;
+	weightedSection: HTMLElement;
+}
+
+export function buildMatrixScaffold(container: HTMLElement): MatrixScaffold {
+	const toolbar = container.createEl('div', { cls: 'dmv-toolbar' });
+	const body = container.createEl('div', { cls: 'dmv-body' });
+	const rawSection = body.createEl('div', { cls: 'dmv-section' });
+	const weightedSection = body.createEl('div', { cls: 'dmv-section' });
+	return { toolbar, body, rawSection, weightedSection };
+}
+
+/**
+ * Raw scores table — criteria names in header, editable score cells, clickable item names.
+ */
+export function renderRawTable(
+	container: HTMLElement,
+	items: DecisionItem[],
+	criteria: string[],
+	scale: ScoreScale,
+	onScoreEdit: (item: DecisionItem, criterion: string, newValue: number) => void,
+	onItemClick: (item: DecisionItem) => void,
+): void {
+	container.createEl('h3', { text: 'Raw Scores', cls: 'dmv-section-title' });
+
+	const wrap = container.createEl('div', { cls: 'dmv-table-wrap' });
+	const table = wrap.createEl('table', { cls: 'dmv-table' });
+	const thead = table.createEl('thead');
+
+	const headerRow = thead.createEl('tr');
+	headerRow.createEl('th', { text: 'Item', cls: 'dmv-th dmv-th-item' });
+	for (const c of criteria) {
+		headerRow.createEl('th', { text: formatCriterionName(c), cls: 'dmv-th dmv-th-criterion' });
+	}
+	headerRow.createEl('th', { text: `/ ${scale}`, cls: 'dmv-th dmv-th-scale' });
+
+	const tbody = table.createEl('tbody');
+	for (const item of items) {
+		const tr = tbody.createEl('tr', { cls: 'dmv-row' });
+
+		const nameTd = tr.createEl('td', { cls: 'dmv-td dmv-td-item dmv-td-link' });
+		nameTd.textContent = item.title;
+		nameTd.addEventListener('click', () => onItemClick(item));
+
+		for (const c of criteria) {
+			const score = item.scores[c] ?? 0;
+			const td = tr.createEl('td', { cls: 'dmv-td dmv-td-score dmv-td-editable' });
+			renderEditableScore(td, score, scale, (newVal) => onScoreEdit(item, c, newVal));
+		}
+
+		tr.createEl('td', { cls: 'dmv-td dmv-td-scale' });
+	}
+}
+
+/**
+ * Renders a score cell that toggles into an inline input on click.
+ * No clamping — users can enter any value; color coding handles indication.
+ */
+function renderEditableScore(
+	td: HTMLElement,
+	score: number,
+	scale: ScoreScale,
+	onCommit: (value: number) => void,
+): void {
+	td.empty();
+	td.createEl('span', { text: String(score), cls: 'dmv-score-display' });
+	colorScoreCell(td, score, scale);
+
+	td.addEventListener('click', () => {
+		if (td.querySelector('input')) return;
+
+		td.empty();
+		td.classList.add('dmv-td--editing');
+
+		const input = td.createEl('input', {
+			cls: 'dmv-score-input',
+			type: 'number',
+			attr: { min: '0', step: '1' },
+		});
+		input.value = String(score);
+		input.select();
+
+		const commit = () => {
+			const v = parseFloat(input.value);
+			const val = isNaN(v) ? score : Math.max(0, Math.round(v));
+			td.classList.remove('dmv-td--editing');
+			// Restore display immediately so cell isn't blank while async write completes
+			td.empty();
+			td.createEl('span', { text: String(val), cls: 'dmv-score-display' });
+			colorScoreCell(td, val, scale);
+			onCommit(val);
+		};
+
+		input.addEventListener('blur', commit);
+		input.addEventListener('keydown', (e: KeyboardEvent) => {
+			if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+			if (e.key === 'Escape') {
+				td.classList.remove('dmv-td--editing');
+				td.empty();
+				td.createEl('span', { text: String(score), cls: 'dmv-score-display' });
+				colorScoreCell(td, score, scale);
+			}
+		});
+
+		input.focus();
+	});
+}
+
+/**
+ * Weighted scores table — editable weight inputs in a sub-header row, rank column.
+ * Weights are always editable regardless of source.
+ */
+export function renderWeightedTable(
+	container: HTMLElement,
+	items: DecisionItem[],
+	criteria: string[],
+	scale: ScoreScale,
+	weights: Record<string, number>,
+	weightsFromNote: boolean,
+	onWeightChange: (criterion: string, value: number) => void,
+	onItemClick: (item: DecisionItem) => void,
+): void {
+	container.createEl('h3', { text: 'Weighted Scores', cls: 'dmv-section-title' });
+
+	const wrap = container.createEl('div', { cls: 'dmv-table-wrap' });
+	const table = wrap.createEl('table', { cls: 'dmv-table' });
+	const thead = table.createEl('thead');
+
+	// Row 1: criterion names
+	const nameRow = thead.createEl('tr');
+	nameRow.createEl('th', { text: 'Item', cls: 'dmv-th dmv-th-item', attr: { rowspan: '2' } });
+	for (const c of criteria) {
+		nameRow.createEl('th', { text: formatCriterionName(c), cls: 'dmv-th dmv-th-criterion' });
+	}
+	nameRow.createEl('th', { text: 'Weighted Avg', cls: 'dmv-th dmv-th-avg', attr: { rowspan: '2' } });
+	nameRow.createEl('th', { text: 'Rank', cls: 'dmv-th dmv-th-rank', attr: { rowspan: '2' } });
+
+	// Row 2: weight inputs
+	const weightRow = thead.createEl('tr', { cls: 'dmv-weight-row-header' });
+	for (const c of criteria) {
+		const wTh = weightRow.createEl('th', { cls: 'dmv-th dmv-th-weight' });
+		const input = wTh.createEl('input', {
+			cls: 'dmv-weight-input',
+			type: 'number',
+			attr: { step: '0.1' }, // no min — negatives allowed
+		});
+		input.value = String(weights[c] ?? 1);
+		if (weightsFromNote) {
+			input.title = `From note: weight_${c}. Edit here to override for this session.`;
+		}
+		input.addEventListener('change', () => {
+			const v = parseFloat(input.value);
+			onWeightChange(c, isNaN(v) ? 1 : v); // negatives allowed
+		});
+	}
+
+	// Compute ranks — standard competition ranking (ties share the same rank)
+	const weightedAvgs = items.map(item => ({
+		item,
+		avg: computeWeightedAvg(item, criteria, weights),
+	}));
+	weightedAvgs.sort((a, b) => b.avg - a.avg);
+
+	// Assign ranks: items with the same avg get the same rank; next rank skips
+	const rankMap = new Map<string, number>();
+	const tieMap = new Map<string, boolean>(); // id → is tied with another item
+	let pos = 1;
+	for (let i = 0; i < weightedAvgs.length; i++) {
+		if (i > 0 && weightedAvgs[i].avg === weightedAvgs[i - 1].avg) {
+			// Tied with previous — give same rank, mark both as tied
+			const prevRank = rankMap.get(weightedAvgs[i - 1].item.id)!;
+			rankMap.set(weightedAvgs[i].item.id, prevRank);
+			tieMap.set(weightedAvgs[i].item.id, true);
+			tieMap.set(weightedAvgs[i - 1].item.id, true);
+		} else {
+			rankMap.set(weightedAvgs[i].item.id, pos);
+		}
+		pos++;
+	}
+
+	// Data rows
+	const tbody = table.createEl('tbody');
+	for (const item of items) {
+		const tr = tbody.createEl('tr', { cls: 'dmv-row' });
+		const rank = rankMap.get(item.id) ?? 0;
+		if (rank <= 3) tr.classList.add(`dmv-row--rank-${rank}`);
+
+		const nameTd = tr.createEl('td', { cls: 'dmv-td dmv-td-item dmv-td-link' });
+		nameTd.textContent = item.title;
+		nameTd.addEventListener('click', () => onItemClick(item));
+
+		for (const c of criteria) {
+			const score = item.scores[c] ?? 0;
+			const w = weights[c] ?? 1;
+			const weighted = round2(score * w);
+			const td = tr.createEl('td', { text: String(weighted), cls: 'dmv-td dmv-td-score' });
+			colorScoreCell(td, score, scale);
+		}
+
+		const avg = computeWeightedAvg(item, criteria, weights);
+		const avgTd = tr.createEl('td', { text: to2SigFigs(avg), cls: 'dmv-td dmv-td-avg' });
+		colorScoreCell(avgTd, avg, scale);
+
+		const isTied = tieMap.get(item.id) ?? false;
+		const rankLabel = isTied ? `=${rank}` : `#${rank}`;
+		const rankTd = tr.createEl('td', { text: rankLabel, cls: 'dmv-td dmv-td-rank' });
+		if (rank <= 3) rankTd.classList.add(`dmv-rank--top-${rank}`);
+	}
+}
+
+/**
+ * Weighted average using |weight| as the denominator so negative weights
+ * act as same-strength penalties without collapsing the scale.
+ * Formula: Σ(score × weight) / Σ|weight|
+ */
+function computeWeightedAvg(
+	item: DecisionItem,
+	criteria: string[],
+	weights: Record<string, number>,
+): number {
+	let sumWeighted = 0;
+	let sumAbsWeights = 0;
+	for (const c of criteria) {
+		const w = weights[c] ?? 1;
+		sumWeighted += (item.scores[c] ?? 0) * w;
+		sumAbsWeights += Math.abs(w);
+	}
+	return sumAbsWeights > 0 ? sumWeighted / sumAbsWeights : 0;
+}
+
+function round2(n: number): number {
+	return Math.round(n * 100) / 100;
+}
+
+/** Format to 2 significant figures without scientific notation. */
+function to2SigFigs(n: number): string {
+	if (n === 0) return '0';
+	return Number(n.toPrecision(2)).toString();
+}
+
+export function formatCriterionName(name: string): string {
+	return name
+		.replace(/[_-]/g, ' ')
+		.replace(/([a-z])([A-Z])/g, '$1 $2')
+		.replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function colorScoreCell(td: HTMLElement, score: number, scale: ScoreScale): void {
+	td.classList.remove('dmv-score--high', 'dmv-score--mid', 'dmv-score--low', 'dmv-score--over');
+	const pct = score / scale;
+	if (pct > 1) td.classList.add('dmv-score--over');
+	else if (pct >= 0.8) td.classList.add('dmv-score--high');
+	else if (pct >= 0.5) td.classList.add('dmv-score--mid');
+	else if (pct > 0) td.classList.add('dmv-score--low');
+}

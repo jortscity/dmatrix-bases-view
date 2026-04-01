@@ -1,0 +1,417 @@
+/* ============================================================
+   Decision Matrix Bases View — styles.css
+   ============================================================ */
+
+/* ── Root container ────────────────────────────────────────── */
+.dmv-root {
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+	overflow: auto;
+	font-size: var(--font-ui-small);
+	color: var(--text-normal);
+}
+
+/* ── Toolbar ───────────────────────────────────────────────── */
+.dmv-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 10px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	flex-shrink: 0;
+	flex-wrap: wrap;
+}
+
+.dmv-toolbar-label {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	margin-right: 2px;
+}
+
+.dmv-toolbar-separator {
+	width: 1px;
+	height: 20px;
+	background: var(--background-modifier-border);
+	margin: 0 4px;
+}
+
+.dmv-scale-group {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.dmv-scale-btn {
+	padding: 3px 10px;
+	border-radius: var(--radius-s);
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-muted);
+	cursor: pointer;
+	font-size: var(--font-ui-smaller);
+	transition: background 0.15s, color 0.15s;
+}
+
+.dmv-scale-btn:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.dmv-scale-btn.is-active {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
+}
+
+.dmv-btn {
+	padding: 3px 12px;
+	border-radius: var(--radius-s);
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	cursor: pointer;
+	font-size: var(--font-ui-smaller);
+	transition: background 0.15s;
+}
+
+.dmv-btn:hover {
+	background: var(--background-modifier-hover);
+}
+
+/* Icon-only button (reload) */
+.dmv-btn--icon {
+	padding: 3px 7px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.dmv-btn--icon svg {
+	width: 14px;
+	height: 14px;
+}
+
+/* ── Embed hint banner ─────────────────────────────────────── */
+.dmv-embed-hint {
+	padding: 7px 12px;
+	border-bottom: 1px solid color-mix(in srgb, var(--interactive-accent) 25%, transparent);
+	background: color-mix(in srgb, var(--interactive-accent) 8%, transparent);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	line-height: 1.5;
+	flex-shrink: 0;
+}
+
+.dmv-embed-hint code {
+	padding: 1px 4px;
+	border-radius: var(--radius-s);
+	background: var(--background-secondary);
+	font-size: 0.9em;
+}
+
+/* ── Body / sections ───────────────────────────────────────── */
+.dmv-body {
+	flex: 1;
+	overflow: auto;
+	padding: 10px 12px;
+}
+
+.dmv-section {
+	margin-bottom: 18px;
+}
+
+.dmv-section-title {
+	font-size: var(--font-ui-medium);
+	font-weight: 600;
+	margin: 0 0 6px 0;
+	color: var(--text-normal);
+}
+
+.dmv-empty {
+	padding: 40px 20px;
+	text-align: center;
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+/* ── Table wrapper ─────────────────────────────────────────── */
+/* overflow-x allows scrolling in narrow embeds.
+   The table itself is auto-width so it doesn't spread
+   to fill the full pane width. */
+.dmv-table-wrap {
+	overflow-x: auto;
+}
+
+/* ── Tables ────────────────────────────────────────────────── */
+.dmv-table {
+	width: auto;           /* shrink to content, not full-pane */
+	min-width: 0;
+	border-collapse: collapse;
+	table-layout: auto;
+}
+
+/* ── Headers ───────────────────────────────────────────────── */
+.dmv-th {
+	padding: 6px 10px;
+	text-align: center;
+	font-weight: 600;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	border-bottom: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	vertical-align: bottom;
+}
+
+.dmv-th-item {
+	text-align: left;
+	min-width: 120px;
+	white-space: nowrap;
+	vertical-align: middle;
+}
+
+/* Criterion headers wrap to 2 lines at narrowest legible size. */
+.dmv-th-criterion {
+	min-width: 60px;
+	max-width: 86px;
+	white-space: normal;
+	word-break: break-word;
+	overflow-wrap: break-word;
+	display: table-cell;
+	line-height: 1.25;
+	font-size: 10px;
+}
+
+.dmv-th-weight {
+	min-width: 60px;
+	max-width: 86px;
+	padding: 3px 10px 6px;
+	font-size: 10px;
+	background: color-mix(in srgb, var(--background-secondary) 60%, transparent);
+	border-bottom: 2px solid var(--background-modifier-border);
+}
+
+.dmv-th-avg {
+	min-width: 80px;
+	font-weight: 700;
+	color: var(--text-normal);
+	white-space: nowrap;
+	vertical-align: middle;
+}
+
+.dmv-th-rank {
+	min-width: 40px;
+	font-weight: 700;
+	white-space: nowrap;
+	vertical-align: middle;
+}
+
+.dmv-th-scale {
+	min-width: 32px;
+	color: var(--text-faint);
+	font-weight: 400;
+	white-space: nowrap;
+}
+
+/* ── Weight inputs ─────────────────────────────────────────── */
+.dmv-weight-input {
+	width: 50px;
+	padding: 2px 4px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 11px;
+	text-align: center;
+}
+
+.dmv-weight-input:focus {
+	border-color: var(--interactive-accent);
+	outline: none;
+}
+
+.dmv-weight-row-header th {
+	background: color-mix(in srgb, var(--background-secondary) 70%, var(--background-primary));
+}
+
+/* ── Data cells ────────────────────────────────────────────── */
+.dmv-td {
+	padding: 5px 10px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+}
+
+.dmv-td-item {
+	text-align: left;
+	font-weight: 500;
+	color: var(--text-normal);
+	max-width: 200px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Clickable note name */
+.dmv-td-link {
+	cursor: pointer;
+	color: var(--link-color, var(--text-accent));
+}
+
+.dmv-td-link:hover {
+	text-decoration: underline;
+}
+
+.dmv-td-score {
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-smaller);
+}
+
+.dmv-td-avg {
+	font-family: var(--font-monospace);
+	font-weight: 700;
+}
+
+.dmv-td-rank {
+	font-weight: 700;
+	color: var(--text-muted);
+}
+
+.dmv-td-scale {
+	color: var(--text-faint);
+	width: 28px;
+}
+
+/* ── Editable score cells ──────────────────────────────────── */
+.dmv-td-editable {
+	cursor: pointer;
+	position: relative;
+}
+
+.dmv-td-editable:hover {
+	background: color-mix(in srgb, var(--interactive-accent) 10%, transparent) !important;
+}
+
+.dmv-td-editable:hover .dmv-score-display::after {
+	content: ' ✎';
+	font-size: 10px;
+	opacity: 0.45;
+}
+
+.dmv-td--editing {
+	padding: 2px 4px;
+}
+
+.dmv-score-input {
+	width: 50px;
+	padding: 2px 4px;
+	border: 1px solid var(--interactive-accent);
+	border-radius: var(--radius-s);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-smaller);
+	text-align: center;
+	outline: none;
+}
+
+/* ── Score color coding ────────────────────────────────────── */
+.dmv-score--high {
+	color: var(--dmv-score-high, #51cf66);
+}
+
+.dmv-score--mid {
+	color: var(--dmv-score-mid, #ffd43b);
+}
+
+.dmv-score--low {
+	color: var(--dmv-score-low, #ff6b6b);
+}
+
+/* Value exceeds the selected scale (e.g. 12 on a /10 scale) */
+.dmv-score--over {
+	color: var(--dmv-score-over, #cc5de8);
+	font-style: italic;
+}
+
+/* ── Rank row highlighting — 3 tiers ───────────────────────── */
+.dmv-row--rank-1 {
+	background: color-mix(in srgb, var(--interactive-accent) 18%, transparent) !important;
+}
+
+.dmv-row--rank-2 {
+	background: color-mix(in srgb, var(--interactive-accent) 9%, transparent) !important;
+}
+
+.dmv-row--rank-3 {
+	background: color-mix(in srgb, var(--interactive-accent) 5%, transparent) !important;
+}
+
+.dmv-rank--top-1 {
+	color: var(--interactive-accent) !important;
+	font-weight: 700;
+}
+
+.dmv-rank--top-2 {
+	color: color-mix(in srgb, var(--interactive-accent) 75%, var(--text-muted));
+}
+
+.dmv-rank--top-3 {
+	color: color-mix(in srgb, var(--interactive-accent) 50%, var(--text-muted));
+}
+
+/* ── Row hover ─────────────────────────────────────────────── */
+.dmv-row:hover {
+	background: var(--background-modifier-hover);
+}
+
+/* ── Alternating rows ──────────────────────────────────────── */
+.dmv-table tbody tr:nth-child(even) {
+	background: color-mix(in srgb, var(--background-secondary) 35%, transparent);
+}
+
+.dmv-table tbody tr:nth-child(even):hover {
+	background: var(--background-modifier-hover);
+}
+
+/* ── Narrow embed overrides ────────────────────────────────── */
+.markdown-embed .dmv-toolbar {
+	gap: 4px;
+	padding: 4px 8px;
+}
+
+.markdown-embed .dmv-body {
+	padding: 6px 8px;
+}
+
+.markdown-embed .dmv-th,
+.markdown-embed .dmv-td {
+	padding: 4px 6px;
+	font-size: 11px;
+}
+
+.markdown-embed .dmv-th-item,
+.markdown-embed .dmv-td-item {
+	max-width: 100px;
+}
+
+.markdown-embed .dmv-th-criterion {
+	max-width: 70px;
+}
+
+.markdown-embed .dmv-section-title {
+	font-size: 12px;
+	margin-bottom: 4px;
+}
+
+.markdown-embed .dmv-weight-input,
+.markdown-embed .dmv-score-input {
+	width: 38px;
+	font-size: 11px;
+}
+
+.markdown-embed .dmv-embed-hint {
+	font-size: 11px;
+	padding: 5px 8px;
+}

@@ -151,17 +151,22 @@ export class DecisionMatrixRankingsView extends BasesView {
 	private _renderCard(parent: HTMLElement, ri: RankedItem, maxAvg: number): void {
 		const card = parent.createEl('div', { cls: 'dmr-card' });
 
+		const header = card.createEl('div', { cls: 'dmr-card-header' });
+		const badgeCls = `dmr-badge dmr-badge--${Math.min(ri.rank, 3)}`;
+		header.createEl('div', { text: `#${ri.rank}`, cls: `dmr-card-badge ${badgeCls}` });
+
 		if (ri.cover) {
-			const img = card.createEl('img', { cls: 'dmr-card-cover' });
+			const img = header.createEl('img', { cls: 'dmr-card-cover' });
 			(img as HTMLImageElement).src = ri.cover;
 			(img as HTMLImageElement).alt = ri.item.title;
+		} else {
+			const fallback = header.createEl('div', { cls: 'dmr-card-cover dmr-cover-fallback' });
+			setIcon(fallback, 'image');
 		}
-
-		card.createEl('div', { text: `#${ri.rank}`, cls: 'dmr-card-rank' });
 
 		const titleEl = card.createEl('div', { cls: 'dmr-card-title' });
 		titleEl.textContent = ri.item.title;
-		titleEl.addEventListener('click', () => this._openNote(ri.item));
+		titleEl.addEventListener('click', (e: MouseEvent) => this._openNote(ri.item, e));
 
 		const barWrap = card.createEl('div', {
 			cls: 'dmr-bar-wrap',
@@ -169,26 +174,31 @@ export class DecisionMatrixRankingsView extends BasesView {
 		});
 		const pct = maxAvg > 0 ? Math.round((ri.avg / maxAvg) * 100) : 0;
 		const bar = barWrap.createEl('div', { cls: 'dmr-bar' });
-		bar.style.width = `${pct}%`;
+		bar.style.setProperty('--dmr-bar-target', `${pct}%`);
 	}
 
 	private _renderList(body: HTMLElement, ranked: RankedItem[], maxAvg: number): void {
 		const list = body.createEl('div', { cls: 'dmr-list' });
 
-		for (const ri of ranked) {
+		for (let i = 0; i < ranked.length; i++) {
+			const ri = ranked[i];
 			const row = list.createEl('div', { cls: 'dmr-list-item' });
+			row.style.animationDelay = `${0.3 + i * 0.04}s`;
 
-			row.createEl('span', { text: `#${ri.rank}`, cls: 'dmr-list-rank' });
+			row.createEl('span', { text: `#${ri.rank}`, cls: 'dmr-list-badge dmr-badge dmr-badge--other' });
 
 			if (ri.cover) {
 				const img = row.createEl('img', { cls: 'dmr-list-cover' });
 				(img as HTMLImageElement).src = ri.cover;
 				(img as HTMLImageElement).alt = ri.item.title;
+			} else {
+				const fallback = row.createEl('div', { cls: 'dmr-list-cover dmr-cover-fallback' });
+				setIcon(fallback, 'image');
 			}
 
 			const titleEl = row.createEl('span', { cls: 'dmr-list-title' });
 			titleEl.textContent = ri.item.title;
-			titleEl.addEventListener('click', () => this._openNote(ri.item));
+			titleEl.addEventListener('click', (e: MouseEvent) => this._openNote(ri.item, e));
 
 			const barWrap = row.createEl('div', {
 				cls: 'dmr-list-bar-wrap',
@@ -196,12 +206,13 @@ export class DecisionMatrixRankingsView extends BasesView {
 			});
 			const pct = maxAvg > 0 ? Math.round((ri.avg / maxAvg) * 100) : 0;
 			const bar = barWrap.createEl('div', { cls: 'dmr-bar' });
-			bar.style.width = `${pct}%`;
+			bar.style.setProperty('--dmr-bar-target', `${pct}%`);
 		}
 	}
 
-	private _openNote(item: DecisionItem): void {
-		const leaf = this.app.workspace.getLeaf(false);
+	private _openNote(item: DecisionItem, e?: MouseEvent): void {
+		const newTab = e ? (e.ctrlKey || e.metaKey) : false;
+		const leaf = this.app.workspace.getLeaf(newTab);
 		if (leaf) leaf.openFile(item.file);
 	}
 

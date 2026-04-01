@@ -88,7 +88,7 @@ export class DecisionMatrixView extends BasesView {
 					fm[criterion] = newVal;
 				});
 			},
-			(item) => this._openNote(item),
+			(item, e) => this._openNote(item, e),
 			scorePrefix,
 			this._collapsedGroups,
 			(key) => {
@@ -109,7 +109,7 @@ export class DecisionMatrixView extends BasesView {
 				this._weights[criterion] = value;
 				this._render();
 			},
-			(item) => this._openNote(item),
+			(item, e) => this._openNote(item, e),
 			scorePrefix,
 			this._collapsedGroups,
 			(key) => {
@@ -194,8 +194,8 @@ export class DecisionMatrixView extends BasesView {
 		return criteria.some(c => fm[`weight_${c}`] != null);
 	}
 
-	private _openNote(item: DecisionItem): void {
-		const leaf = this.app.workspace.getLeaf(false);
+	private _openNote(item: DecisionItem, e?: MouseEvent): void {
+		const leaf = this.app.workspace.getLeaf(e ? (e.ctrlKey || e.metaKey) : false);
 		if (leaf) leaf.openFile(item.file);
 	}
 

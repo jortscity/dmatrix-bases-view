@@ -27,7 +27,7 @@ export function renderRawTable(
 	criteria: string[],
 	scale: ScoreScale,
 	onScoreEdit: (item: DecisionItem, criterion: string, newValue: number) => void,
-	onItemClick: (item: DecisionItem) => void,
+	onItemClick: (item: DecisionItem, e: MouseEvent) => void,
 	scorePrefix?: string,
 	collapsedGroups?: Set<string>,
 	onToggleGroup?: (key: string) => void,
@@ -74,7 +74,7 @@ export function renderRawTable(
 
 			const nameTd = tr.createEl('td', { cls: 'dmv-td dmv-td-item dmv-td-link' });
 			nameTd.textContent = item.title;
-			nameTd.addEventListener('click', () => onItemClick(item));
+			nameTd.addEventListener('click', (e: MouseEvent) => onItemClick(item, e));
 
 			for (const c of criteria) {
 				const score = item.scores[c] ?? null;
@@ -160,7 +160,7 @@ export function renderWeightedTable(
 	weights: Record<string, number>,
 	weightsFromNote: boolean,
 	onWeightChange: (criterion: string, value: number) => void,
-	onItemClick: (item: DecisionItem) => void,
+	onItemClick: (item: DecisionItem, e: MouseEvent) => void,
 	scorePrefix?: string,
 	collapsedGroups?: Set<string>,
 	onToggleGroup?: (key: string) => void,
@@ -262,7 +262,7 @@ export function renderWeightedTable(
 
 			const nameTd = tr.createEl('td', { cls: 'dmv-td dmv-td-item dmv-td-link' });
 			nameTd.textContent = item.title;
-			nameTd.addEventListener('click', () => onItemClick(item));
+			nameTd.addEventListener('click', (e: MouseEvent) => onItemClick(item, e));
 
 			for (const c of criteria) {
 				const score = item.scores[c] ?? 0;

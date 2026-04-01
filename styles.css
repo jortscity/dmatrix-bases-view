@@ -458,15 +458,31 @@
 }
 
 .dmr-body {
-	padding: 10px 12px;
+	padding: 12px 14px;
 }
+
+/* ── Rank badges (squircle) ────────────────────────────────── */
+.dmr-badge {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 18%;
+	font-weight: 800;
+	flex-shrink: 0;
+	line-height: 1;
+}
+
+.dmr-badge--1 { background: #F5C400; color: #5a4000; }
+.dmr-badge--2 { background: #B8BFC7; color: #1e1e1e; }
+.dmr-badge--3 { background: #C47722; color: #fff; }
+.dmr-badge--other { background: var(--background-modifier-border); color: var(--text-muted); }
 
 /* ── Podium ────────────────────────────────────────────────── */
 .dmr-podium {
 	display: flex;
 	align-items: flex-end;
-	gap: 6px;
-	margin-bottom: 10px;
+	gap: 8px;
+	margin-bottom: 12px;
 }
 
 .dmr-pedestal {
@@ -477,7 +493,6 @@
 	align-items: stretch;
 }
 
-/* Platform base below each card */
 .dmr-pedestal::after {
 	content: '';
 	display: block;
@@ -486,62 +501,68 @@
 }
 
 .dmr-pedestal--1st::after {
-	height: 26px;
-	background: var(--interactive-accent);
-	opacity: 0.75;
+	height: 28px;
+	background: #F5C400;
+	opacity: 0.6;
 }
 
 .dmr-pedestal--2nd::after {
-	height: 18px;
-	background: color-mix(in srgb, var(--interactive-accent) 55%, var(--background-modifier-border));
+	height: 20px;
+	background: #B8BFC7;
+	opacity: 0.6;
 }
 
 .dmr-pedestal--3rd::after {
-	height: 12px;
-	background: color-mix(in srgb, var(--interactive-accent) 30%, var(--background-modifier-border));
+	height: 14px;
+	background: #C47722;
+	opacity: 0.6;
 }
 
 /* ── Cards ─────────────────────────────────────────────────── */
 .dmr-card {
-	padding: 6px;
-	border: 1px solid var(--background-modifier-border);
+	padding: 10px;
+	border: 2px solid var(--background-modifier-border);
 	border-bottom: none;
 	border-radius: var(--radius-s) var(--radius-s) 0 0;
 	background: var(--background-primary);
 	display: flex;
 	flex-direction: column;
-	align-items: center;
-	gap: 4px;
+	gap: 8px;
 	min-width: 0;
 }
 
-.dmr-pedestal--1st .dmr-card {
-	border-color: var(--interactive-accent);
+.dmr-pedestal--1st .dmr-card { border-color: #F5C400; }
+.dmr-pedestal--2nd .dmr-card { border-color: #B8BFC7; }
+.dmr-pedestal--3rd .dmr-card { border-color: #C47722; }
+
+.dmr-card-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.dmr-card-badge {
+	width: 38px;
+	height: 38px;
+	font-size: 1.1em;
 }
 
 .dmr-card-cover {
-	width: 40px;
-	height: 40px;
+	width: 64px;
+	height: 64px;
 	object-fit: cover;
 	border-radius: var(--radius-s);
 	flex-shrink: 0;
 }
 
-.dmr-card-rank {
-	font-size: 1.05em;
-	font-weight: 700;
-	color: var(--interactive-accent);
-	line-height: 1;
-}
-
 .dmr-card-title {
-	font-size: var(--font-ui-smaller);
-	font-weight: 500;
-	text-align: center;
-	width: 100%;
+	font-size: 0.95em;
+	font-weight: 600;
+	line-height: 1.35;
 	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
 	cursor: pointer;
 	color: var(--link-color, var(--text-accent));
 }
@@ -550,68 +571,147 @@
 	text-decoration: underline;
 }
 
-/* ── Score bar (shared by cards and list rows) ─────────────── */
+/* ── Score bar ─────────────────────────────────────────────── */
 .dmr-bar-wrap,
 .dmr-list-bar-wrap {
 	width: 100%;
-	height: 4px;
+	height: 5px;
 	background: var(--background-modifier-border);
-	border-radius: 2px;
+	border-radius: 3px;
 	overflow: hidden;
 	flex-shrink: 0;
 }
 
 .dmr-list-bar-wrap {
-	width: 36px;
+	width: 44px;
 }
 
 .dmr-bar {
 	height: 100%;
 	background: var(--interactive-accent);
-	border-radius: 2px;
-	min-width: 2px;
+	border-radius: 3px;
+	min-width: 0;
+	width: 0;
+	animation: dmr-bar-grow 0.9s cubic-bezier(0.4, 0, 0.2, 1) both;
+	transition: filter 0.2s;
+}
+
+@keyframes dmr-bar-grow {
+	from { width: 0; }
+	to   { width: var(--dmr-bar-target, 0%); }
+}
+
+/* ── Entrance animations ───────────────────────────────────── */
+@keyframes dmr-slide-up {
+	from { opacity: 0; transform: translateY(14px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dmr-fade-in {
+	from { opacity: 0; transform: translateY(6px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Podium: 2nd first, 3rd second, 1st last (building to the winner) */
+.dmr-pedestal {
+	animation: dmr-slide-up 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.dmr-pedestal:nth-child(1) { animation-delay: 0.05s; } /* 2nd */
+.dmr-pedestal:nth-child(3) { animation-delay: 0.12s; } /* 3rd */
+.dmr-pedestal:nth-child(2) { animation-delay: 0.22s; } /* 1st — last */
+
+/* List items stagger is set inline via JS */
+.dmr-list-item {
+	animation: dmr-fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* ── Gold shimmer on #1 ────────────────────────────────────── */
+@keyframes dmr-shimmer {
+	0%   { background-position: -150% 0; }
+	100% { background-position: 250% 0; }
+}
+
+.dmr-badge--1 {
+	background: linear-gradient(105deg, #F5C400 35%, #fff3a0 50%, #F5C400 65%);
+	background-size: 250% 100%;
+	animation: dmr-shimmer 3s ease-in-out infinite;
+	animation-delay: 0.9s;
+}
+
+/* ── Card hover ────────────────────────────────────────────── */
+.dmr-card {
+	transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
+}
+
+.dmr-pedestal:hover .dmr-card {
+	transform: translateY(-4px);
+	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+}
+
+.dmr-pedestal:hover .dmr-card-badge {
+	transform: scale(1.08);
+	transition: transform 0.2s ease;
+}
+
+.dmr-pedestal:hover .dmr-bar {
+	filter: brightness(1.25);
 }
 
 /* ── List (4th+) ───────────────────────────────────────────── */
 .dmr-list {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
-	gap: 4px;
+	gap: 6px;
 }
 
 .dmr-list-item {
 	display: flex;
 	align-items: center;
-	gap: 5px;
-	padding: 4px 6px;
+	gap: 8px;
+	padding: 8px;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-s);
 	background: var(--background-secondary);
 	min-width: 0;
+	transition: background 0.15s, transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+	cursor: default;
 }
 
-.dmr-list-rank {
-	font-weight: 700;
-	font-size: var(--font-ui-smaller);
-	color: var(--text-muted);
+.dmr-list-item:hover {
+	background: var(--background-modifier-hover);
+	border-color: color-mix(in srgb, var(--interactive-accent) 50%, var(--background-modifier-border));
+	transform: translateY(-1px);
+	box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dmr-list-item:hover .dmr-bar {
+	filter: brightness(1.2);
+}
+
+.dmr-list-badge {
+	width: 34px;
+	height: 34px;
+	font-size: 0.75em;
 	flex-shrink: 0;
-	min-width: 22px;
 }
 
 .dmr-list-cover {
-	width: 24px;
-	height: 24px;
+	width: 34px;
+	height: 34px;
 	object-fit: cover;
-	border-radius: 3px;
+	border-radius: 4px;
 	flex-shrink: 0;
 }
 
 .dmr-list-title {
 	flex: 1;
-	font-size: var(--font-ui-smaller);
+	font-size: 1em;
+	font-weight: 500;
+	line-height: 1.35;
 	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
 	cursor: pointer;
 	color: var(--link-color, var(--text-accent));
 }
@@ -620,20 +720,22 @@
 	text-decoration: underline;
 }
 
-/* ── Narrow embed overrides ────────────────────────────────── */
-.markdown-embed .dmr-body {
-	padding: 6px 8px;
+.dmr-list-bar-wrap {
+	flex-shrink: 0;
+	align-self: center;
 }
 
-.markdown-embed .dmr-card-cover {
-	width: 32px;
-	height: 32px;
+/* ── Fallback cover icon ────────────────────────────────────── */
+.dmr-cover-fallback {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	color: var(--text-faint);
 }
 
-.markdown-embed .dmr-list {
-	gap: 3px;
-}
-
-.markdown-embed .dmr-list-item {
-	padding: 3px 5px;
+.dmr-cover-fallback svg {
+	width: 55%;
+	height: 55%;
 }

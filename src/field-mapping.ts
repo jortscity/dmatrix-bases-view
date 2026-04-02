@@ -1,4 +1,4 @@
-import type { BasesEntry, BasesPropertyId, NullValue } from 'obsidian';
+import type { App, BasesEntry, BasesPropertyId, NullValue } from 'obsidian';
 import type { DecisionItem } from './types.ts';
 
 const SKIP_PROPS = new Set(['title', 'name', 'status', 'tags', 'projects', 'file']);
@@ -35,6 +35,31 @@ export function detectCriteria(
 		}
 
 		if (hasNumeric) criteria.push(bare);
+	}
+
+	return criteria;
+}
+
+/**
+ * Detect numeric score criteria by scanning entry frontmatter directly.
+ * Used by views that don't have a configured column order (e.g. Rankings view).
+ * Skips weight_*, formula, and known non-score properties.
+ */
+export function detectCriteriaFromFiles(entries: BasesEntry[], app: App): string[] {
+	const seen = new Set<string>();
+	const criteria: string[] = [];
+
+	for (const entry of entries) {
+		const fm = app.metadataCache.getFileCache(entry.file)?.frontmatter;
+		if (!fm) continue;
+		for (const [key, val] of Object.entries(fm)) {
+			if (seen.has(key)) continue;
+			if (SKIP_PROPS.has(key) || key.startsWith('weight_')) continue;
+			if (typeof val === 'number' || (typeof val === 'string' && val !== '' && !isNaN(Number(val)))) {
+				seen.add(key);
+				criteria.push(key);
+			}
+		}
 	}
 
 	return criteria;

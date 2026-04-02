@@ -3,8 +3,8 @@ import type { QueryController } from 'obsidian';
 import type DecisionMatrixPlugin from './main.ts';
 import type { DecisionItem, ItemGroup, ScoreScale } from './types.ts';
 import { SCALES } from './types.ts';
-import { detectCriteria, extractItem } from './field-mapping.ts';
-import { buildMatrixScaffold, renderRawTable, renderWeightedTable } from './renderer.ts';
+import { detectCriteria, detectCriteriaFromFiles, extractItem } from './field-mapping.ts';
+import { buildMatrixScaffold, renderRawTable, renderWeightedTable, computeRankedScores } from './renderer.ts';
 
 export class DecisionMatrixView extends BasesView {
 	type = 'decision-matrix';
@@ -17,6 +17,7 @@ export class DecisionMatrixView extends BasesView {
 	private _weights: Record<string, number> = {};
 	private _weightsFromNote = false;
 	private _collapsedGroups: Set<string> = new Set();
+	private _rankRaws = false;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: DecisionMatrixPlugin) {
 		super(controller);
@@ -39,10 +40,14 @@ export class DecisionMatrixView extends BasesView {
 		const config: BasesViewConfig = this.config;
 		const scale = this.plugin.settings.scale;
 
-		// Detect score criteria from the order array
+		// Detect score criteria from the order array; fall back to frontmatter scan
+		// if getOrder() yields no numeric criteria (happens on non-primary views in multi-view bases)
 		const rawOrder: string[] = config.getOrder() ?? [];
 		const allEntries = this.data.groupedData.flatMap((g: BasesEntryGroup) => g.entries);
-		const criteria = detectCriteria(allEntries, rawOrder);
+		let criteria = detectCriteria(allEntries, rawOrder);
+		if (criteria.length === 0) {
+			criteria = detectCriteriaFromFiles(allEntries, this.app);
+		}
 
 		if (criteria.length === 0) {
 			container.createEl('div', {
@@ -61,6 +66,10 @@ export class DecisionMatrixView extends BasesView {
 			items: g.entries.map(entry => extractItem(entry, criteria)),
 		}));
 		const items = groups.flatMap(g => g.items);
+
+		const rankedScores = this._rankRaws
+			? computeRankedScores(groups, criteria, scale)
+			: undefined;
 
 		// Build scaffold
 		const { toolbar, body, rawSection, weightedSection } = buildMatrixScaffold(container);
@@ -99,6 +108,8 @@ export class DecisionMatrixView extends BasesView {
 				}
 				this._render();
 			},
+			this._rankRaws,
+			rankedScores,
 		);
 
 		// Weighted scores table
@@ -120,6 +131,8 @@ export class DecisionMatrixView extends BasesView {
 				}
 				this._render();
 			},
+			this._rankRaws,
+			rankedScores,
 		);
 	}
 
@@ -235,17 +248,35 @@ export class DecisionMatrixView extends BasesView {
 
 		toolbar.createEl('div', { cls: 'dmv-toolbar-separator' });
 
-		// Normalize button
+		const rankRawsBtn = toolbar.createEl('button', {
+			text: 'Rank Raws',
+			cls: this._rankRaws ? 'dmv-btn dmv-btn--toggle is-active' : 'dmv-btn dmv-btn--toggle',
+			attr: { title: 'Rank each criterion relative to its column max; use ranks in weighted scoring' },
+		});
+		rankRawsBtn.addEventListener('click', () => {
+			this._rankRaws = !this._rankRaws;
+			this._render();
+		});
+
+		toolbar.createEl('div', { cls: 'dmv-toolbar-separator' });
+
+		// Normalize button — disabled while Rank Raws is active
 		const normalizeBtn = toolbar.createEl('button', {
 			text: 'Normalize',
-			cls: 'dmv-btn',
+			cls: this._rankRaws ? 'dmv-btn dmv-btn--disabled' : 'dmv-btn',
 			attr: {
-				title: `Per-criterion: any value exceeding /${currentScale} is scaled down by that criterion's max`,
+				title: this._rankRaws
+					? 'Disabled while Rank Raws is active'
+					: `Per-criterion: any value exceeding /${currentScale} is scaled down by that criterion's max`,
 			},
 		});
-		normalizeBtn.addEventListener('click', async () => {
-			await this._normalizeScores(items, criteria, currentScale);
-		});
+		if (this._rankRaws) {
+			normalizeBtn.setAttribute('disabled', 'true');
+		} else {
+			normalizeBtn.addEventListener('click', async () => {
+				await this._normalizeScores(items, criteria, currentScale);
+			});
+		}
 	}
 
 	/**

@@ -18,6 +18,48 @@ export function buildMatrixScaffold(container: HTMLElement): MatrixScaffold {
 	return { toolbar, body, rawSection, weightedSection };
 }
 
+export function computeRankedScores(
+	groups: ItemGroup[],
+	criteria: string[],
+	scale: ScoreScale,
+): Map<string, Record<string, number>> {
+	const allItems = groups.flatMap(g => g.items);
+	const result = new Map<string, Record<string, number>>();
+	for (const item of allItems) result.set(item.id, {});
+
+	for (const c of criteria) {
+		let colMax = 0;
+		for (const item of allItems) {
+			const v = item.scores[c] ?? 0;
+			if (v > colMax) colMax = v;
+		}
+
+		if (colMax === 0) {
+			for (const item of allItems) result.get(item.id)![c] = 1;
+			continue;
+		}
+
+		// Step 1: normalize (keep as float so close values stay distinct)
+		const normMap = new Map<string, number>();
+		for (const item of allItems) {
+			normMap.set(item.id, ((item.scores[c] ?? 0) / colMax) * scale);
+		}
+
+		// Step 2: competition rank top-down, floor at 0 for sets larger than scale
+		const distinctDesc = [...new Set(normMap.values())].sort((a, b) => b - a);
+		const valToRank = new Map<number, number>();
+		for (let i = 0; i < distinctDesc.length; i++) {
+			valToRank.set(distinctDesc[i], Math.max(1, scale - i));
+		}
+
+		for (const item of allItems) {
+			result.get(item.id)![c] = valToRank.get(normMap.get(item.id)!)!;
+		}
+	}
+
+	return result;
+}
+
 /**
  * Raw scores table — criteria names in header, editable score cells, clickable item names.
  */
@@ -31,17 +73,22 @@ export function renderRawTable(
 	scorePrefix?: string,
 	collapsedGroups?: Set<string>,
 	onToggleGroup?: (key: string) => void,
+	rankRaws?: boolean,
+	rankedScores?: Map<string, Record<string, number>>,
 ): void {
 	container.createEl('h3', { text: 'Raw Scores', cls: 'dmv-section-title' });
 
 	const wrap = container.createEl('div', { cls: 'dmv-table-wrap' });
-	const table = wrap.createEl('table', { cls: 'dmv-table' });
+	const table = wrap.createEl('table', { cls: rankRaws ? 'dmv-table dmv-table--rank-raws' : 'dmv-table' });
 	const thead = table.createEl('thead');
 
 	const headerRow = thead.createEl('tr');
 	headerRow.createEl('th', { text: 'Item', cls: 'dmv-th dmv-th-item' });
 	for (const c of criteria) {
 		headerRow.createEl('th', { text: formatCriterionName(c, scorePrefix), cls: 'dmv-th dmv-th-criterion' });
+		if (rankRaws) {
+			headerRow.createEl('th', { text: 'N', cls: 'dmv-th dmv-th-rank-col' });
+		}
 	}
 	headerRow.createEl('th', { text: `/ ${scale}`, cls: 'dmv-th dmv-th-scale' });
 
@@ -55,7 +102,7 @@ export function renderRawTable(
 		if (hasGroupKey) {
 			const groupTr = tbody.createEl('tr', { cls: 'dmv-group-header' });
 			const groupTd = groupTr.createEl('td', {
-				attr: { colspan: String(criteria.length + 2) },
+				attr: { colspan: String(rankRaws ? criteria.length * 2 + 2 : criteria.length + 2) },
 			});
 			const caret = groupTd.createEl('span', {
 				cls: 'dmv-group-caret',
@@ -79,7 +126,13 @@ export function renderRawTable(
 			for (const c of criteria) {
 				const score = item.scores[c] ?? null;
 				const td = tr.createEl('td', { cls: 'dmv-td dmv-td-score dmv-td-editable' });
-				renderEditableScore(td, score, scale, (newVal) => onScoreEdit(item, c, newVal));
+				renderEditableScore(td, score, scale, (newVal) => onScoreEdit(item, c, newVal), rankRaws);
+				if (rankRaws) {
+					const rankVal = rankedScores?.get(item.id)?.[c] ?? 0;
+					const rankTd = tr.createEl('td', { cls: 'dmv-td dmv-td-score dmv-td-rank-raw' });
+					rankTd.createEl('span', { text: String(rankVal), cls: 'dmv-score-display' });
+					colorScoreCell(rankTd, rankVal, scale);
+				}
 			}
 
 			tr.createEl('td', { cls: 'dmv-td dmv-td-scale' });
@@ -90,12 +143,14 @@ export function renderRawTable(
 /**
  * Renders a score cell that toggles into an inline input on click.
  * No clamping — users can enter any value; color coding handles indication.
+ * When allowDecimals is true, values are not rounded to integers.
  */
 function renderEditableScore(
 	td: HTMLElement,
 	score: number | null,
 	scale: ScoreScale,
 	onCommit: (value: number) => void,
+	allowDecimals = false,
 ): void {
 	td.empty();
 	td.createEl('span', { text: score === null ? '' : String(score), cls: 'dmv-score-display' });
@@ -110,7 +165,7 @@ function renderEditableScore(
 		const input = td.createEl('input', {
 			cls: 'dmv-score-input',
 			type: 'number',
-			attr: { min: '0', step: '1' },
+			attr: { min: '0', step: allowDecimals ? '0.01' : '1' },
 		});
 		input.value = score === null ? '' : String(score);
 		input.select();
@@ -125,7 +180,7 @@ function renderEditableScore(
 				if (score !== null) colorScoreCell(td, score, scale);
 				return;
 			}
-			const val = Math.max(0, Math.round(v));
+			const val = allowDecimals ? Math.max(0, v) : Math.max(0, Math.round(v));
 			td.classList.remove('dmv-td--editing');
 			td.empty();
 			td.createEl('span', { text: String(val), cls: 'dmv-score-display' });
@@ -148,6 +203,37 @@ function renderEditableScore(
 	});
 }
 
+function resolveScores(
+	item: DecisionItem,
+	criteria: string[],
+	rankRaws: boolean,
+	rankedScores: Map<string, Record<string, number>> | undefined,
+): Record<string, number> {
+	if (rankRaws && rankedScores) {
+		const ranked = rankedScores.get(item.id) ?? {};
+		const out: Record<string, number> = {};
+		for (const c of criteria) out[c] = ranked[c] ?? 0;
+		return out;
+	}
+	const out: Record<string, number> = {};
+	for (const c of criteria) out[c] = item.scores[c] ?? 0;
+	return out;
+}
+
+function computeWeightedAvgFromScores(
+	effectiveScores: Record<string, number>,
+	criteria: string[],
+	weights: Record<string, number>,
+): number {
+	let sumWeighted = 0, sumAbsWeights = 0;
+	for (const c of criteria) {
+		const w = weights[c] ?? 1;
+		sumWeighted += (effectiveScores[c] ?? 0) * w;
+		sumAbsWeights += Math.abs(w);
+	}
+	return sumAbsWeights > 0 ? sumWeighted / sumAbsWeights : 0;
+}
+
 /**
  * Weighted scores table — editable weight inputs in a sub-header row, rank column.
  * Weights are always editable regardless of source.
@@ -164,6 +250,8 @@ export function renderWeightedTable(
 	scorePrefix?: string,
 	collapsedGroups?: Set<string>,
 	onToggleGroup?: (key: string) => void,
+	rankRaws?: boolean,
+	rankedScores?: Map<string, Record<string, number>>,
 ): void {
 	container.createEl('h3', { text: 'Weighted Scores', cls: 'dmv-section-title' });
 
@@ -207,10 +295,10 @@ export function renderWeightedTable(
 	// Compute ranks — standard competition ranking (ties share the same rank)
 	// Flatten all items across groups for ranking purposes
 	const allItems = groups.flatMap(g => g.items);
-	const weightedAvgs = allItems.map(item => ({
-		item,
-		avg: computeWeightedAvg(item, criteria, weights),
-	}));
+	const weightedAvgs = allItems.map(item => {
+		const eff = resolveScores(item, criteria, rankRaws ?? false, rankedScores);
+		return { item, avg: computeWeightedAvgFromScores(eff, criteria, weights) };
+	});
 	weightedAvgs.sort((a, b) => b.avg - a.avg);
 
 	// Assign ranks: items with the same avg get the same rank; next rank skips
@@ -264,15 +352,16 @@ export function renderWeightedTable(
 			nameTd.textContent = item.title;
 			nameTd.addEventListener('click', (e: MouseEvent) => onItemClick(item, e));
 
+			const effectiveScores = resolveScores(item, criteria, rankRaws ?? false, rankedScores);
 			for (const c of criteria) {
-				const score = item.scores[c] ?? 0;
+				const score = effectiveScores[c];
 				const w = weights[c] ?? 1;
 				const weighted = round2(score * w);
 				const td = tr.createEl('td', { text: String(weighted), cls: 'dmv-td dmv-td-score' });
 				colorScoreCell(td, score, scale);
 			}
 
-			const avg = computeWeightedAvg(item, criteria, weights);
+			const avg = computeWeightedAvgFromScores(effectiveScores, criteria, weights);
 			const avgTd = tr.createEl('td', { text: to2SigFigs(avg), cls: 'dmv-td dmv-td-avg' });
 			colorScoreCell(avgTd, avg, scale);
 
@@ -284,25 +373,6 @@ export function renderWeightedTable(
 	}
 }
 
-/**
- * Weighted average using |weight| as the denominator so negative weights
- * act as same-strength penalties without collapsing the scale.
- * Formula: Σ(score × weight) / Σ|weight|
- */
-function computeWeightedAvg(
-	item: DecisionItem,
-	criteria: string[],
-	weights: Record<string, number>,
-): number {
-	let sumWeighted = 0;
-	let sumAbsWeights = 0;
-	for (const c of criteria) {
-		const w = weights[c] ?? 1;
-		sumWeighted += (item.scores[c] ?? 0) * w;
-		sumAbsWeights += Math.abs(w);
-	}
-	return sumAbsWeights > 0 ? sumWeighted / sumAbsWeights : 0;
-}
 
 function round2(n: number): number {
 	return Math.round(n * 100) / 100;

@@ -1,8 +1,9 @@
-import { BasesView, BasesViewConfig, BasesEntryGroup, Notice, setIcon } from 'obsidian';
+import { BasesView, BasesEntryGroup, Notice, setIcon } from 'obsidian';
 import type { QueryController } from 'obsidian';
 import type DecisionMatrixPlugin from './main.ts';
-import type { DecisionItem } from './types.ts';
-import { detectCriteria, extractItem } from './field-mapping.ts';
+import type { DecisionItem, ItemGroup } from './types.ts';
+import { detectCriteriaFromFiles, extractItem } from './field-mapping.ts';
+import { computeRankedScores } from './renderer.ts';
 
 interface RankedItem {
 	item: DecisionItem;
@@ -18,6 +19,7 @@ export class DecisionMatrixRankingsView extends BasesView {
 
 	private _weights: Record<string, number> = {};
 	private _weightsFromNote = false;
+	private _rankRaws = false;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: DecisionMatrixPlugin) {
 		super(controller);
@@ -36,10 +38,8 @@ export class DecisionMatrixRankingsView extends BasesView {
 		if (!this.data) return;
 		container.empty();
 
-		const config: BasesViewConfig = this.config;
-		const rawOrder: string[] = config.getOrder() ?? [];
 		const allEntries = this.data.groupedData.flatMap((g: BasesEntryGroup) => g.entries);
-		const criteria = detectCriteria(allEntries, rawOrder);
+		const criteria = detectCriteriaFromFiles(allEntries, this.app);
 
 		if (criteria.length === 0) {
 			container.createEl('div', {
@@ -52,9 +52,14 @@ export class DecisionMatrixRankingsView extends BasesView {
 		this._initMissingWeights(criteria);
 
 		const items: DecisionItem[] = allEntries.map(entry => extractItem(entry, criteria));
-		const ranked = this._rankItems(items, criteria);
+		const groups: ItemGroup[] = [{ key: '', items }];
+		const scale = this.plugin.settings.scale;
+		const rankedScores = this._rankRaws
+			? computeRankedScores(groups, criteria, scale)
+			: undefined;
+		const ranked = this._rankItems(items, criteria, rankedScores);
 
-		// Toolbar — reload weights only
+		// Toolbar
 		const toolbar = container.createEl('div', { cls: 'dmv-toolbar' });
 		const reloadBtn = toolbar.createEl('button', {
 			cls: 'dmv-btn dmv-btn--icon',
@@ -62,6 +67,18 @@ export class DecisionMatrixRankingsView extends BasesView {
 		});
 		setIcon(reloadBtn, 'refresh-cw');
 		reloadBtn.addEventListener('click', () => this._reloadWeightsFromNote(criteria));
+
+		toolbar.createEl('div', { cls: 'dmv-toolbar-separator' });
+
+		const rankRawsBtn = toolbar.createEl('button', {
+			text: 'Rank Raws',
+			cls: this._rankRaws ? 'dmv-btn dmv-btn--toggle is-active' : 'dmv-btn dmv-btn--toggle',
+			attr: { title: 'Rank each criterion relative to its column max; use ranks in weighted scoring' },
+		});
+		rankRawsBtn.addEventListener('click', () => {
+			this._rankRaws = !this._rankRaws;
+			this._render();
+		});
 
 		if (ranked.length === 0) {
 			container.createEl('div', { text: 'No items to rank.', cls: 'dmv-empty' });
@@ -81,10 +98,14 @@ export class DecisionMatrixRankingsView extends BasesView {
 		}
 	}
 
-	private _rankItems(items: DecisionItem[], criteria: string[]): RankedItem[] {
+	private _rankItems(
+		items: DecisionItem[],
+		criteria: string[],
+		rankedScores?: Map<string, Record<string, number>>,
+	): RankedItem[] {
 		const withAvgs = items.map(item => ({
 			item,
-			avg: this._computeAvg(item, criteria),
+			avg: this._computeAvg(item, criteria, rankedScores),
 			cover: this._getCover(item),
 		}));
 		withAvgs.sort((a, b) => b.avg - a.avg);
@@ -101,12 +122,18 @@ export class DecisionMatrixRankingsView extends BasesView {
 		return ranked;
 	}
 
-	private _computeAvg(item: DecisionItem, criteria: string[]): number {
+	private _computeAvg(
+		item: DecisionItem,
+		criteria: string[],
+		rankedScores?: Map<string, Record<string, number>>,
+	): number {
 		let sumWeighted = 0;
 		let sumAbsWeights = 0;
+		const ranked = rankedScores?.get(item.id);
 		for (const c of criteria) {
 			const w = this._weights[c] ?? 1;
-			sumWeighted += (item.scores[c] ?? 0) * w;
+			const score = ranked ? (ranked[c] ?? 0) : (item.scores[c] ?? 0);
+			sumWeighted += score * w;
 			sumAbsWeights += Math.abs(w);
 		}
 		return sumAbsWeights > 0 ? sumWeighted / sumAbsWeights : 0;

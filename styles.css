@@ -739,3 +739,57 @@
 	width: 55%;
 	height: 55%;
 }
+
+/* ── Rank Raws feature ─────────────────────────────────────── */
+
+/* Toggle button active state */
+.dmv-btn--toggle.is-active {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
+}
+
+/* Disabled normalize button */
+.dmv-btn--disabled,
+.dmv-btn[disabled] {
+	opacity: 0.4;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+/* Rank column header in raw table */
+.dmv-th-rank-col {
+	min-width: 28px;
+	width: 28px;
+	font-style: italic;
+	font-size: 9px;
+	color: var(--text-faint);
+	background: color-mix(in srgb, var(--background-secondary) 70%, var(--interactive-accent) 5%);
+	white-space: nowrap;
+	padding: 6px 4px;
+}
+
+/* Tighter score columns when Rank Raws is active */
+.dmv-table--rank-raws .dmv-th-criterion {
+	min-width: 40px;
+	max-width: 56px;
+	font-size: 9px;
+	padding: 6px 3px;
+}
+
+.dmv-table--rank-raws .dmv-td-score {
+	padding: 5px 3px;
+}
+
+/* Read-only rank cell in raw table */
+.dmv-td-rank-raw {
+	font-style: italic;
+	font-size: 9px;
+	color: var(--text-muted);
+	background: color-mix(in srgb, var(--background-secondary) 50%, transparent);
+	cursor: default;
+	white-space: nowrap;
+	min-width: 28px;
+	width: 28px;
+	padding: 5px 4px;
+}

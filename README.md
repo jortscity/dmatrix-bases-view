@@ -11,6 +11,7 @@ A custom [Obsidian Bases](https://help.obsidian.md/bases) view for weighted deci
 - **Weight pre-fill** — add `weight_<criterion>: N` to the embedding note's frontmatter; weights load on open and reset via the ↺ button
 - **Negative weights** — penalize criteria; denominator uses `Σ|weight|` so scale stays consistent
 - **Score prefix stripping** — set a prefix (e.g. `score_`) in settings to strip it from display names
+- **Rank Raws** — normalizes each criterion's raw values into competition ranks before weighted scoring; useful when criteria are on incompatible scales (e.g. price in dollars vs. quality 1–10). Shown as an "N" column alongside each raw score.
 - **Per-criterion normalization** — scales only criteria whose max exceeds the target scale
 - **Row grouping** — uses Bases native grouping; groups are collapsible
 - **Scale toggle** — /5, /10, /100

@@ -18,6 +18,7 @@ export class DecisionMatrixView extends BasesView {
 	private _weightsFromNote = false;
 	private _collapsedGroups: Set<string> = new Set();
 	private _rankRaws = false;
+	private _columnsFolded = false;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: DecisionMatrixPlugin) {
 		super(controller);
@@ -110,6 +111,7 @@ export class DecisionMatrixView extends BasesView {
 			},
 			this._rankRaws,
 			rankedScores,
+			this._columnsFolded,
 		);
 
 		// Weighted scores table
@@ -133,6 +135,7 @@ export class DecisionMatrixView extends BasesView {
 			},
 			this._rankRaws,
 			rankedScores,
+			this._columnsFolded,
 		);
 	}
 
@@ -255,6 +258,18 @@ export class DecisionMatrixView extends BasesView {
 		});
 		rankRawsBtn.addEventListener('click', () => {
 			this._rankRaws = !this._rankRaws;
+			this._render();
+		});
+
+		toolbar.createEl('div', { cls: 'dmv-toolbar-separator' });
+
+		const foldColsBtn = toolbar.createEl('button', {
+			text: 'Fold Cols',
+			cls: this._columnsFolded ? 'dmv-btn dmv-btn--toggle is-active' : 'dmv-btn dmv-btn--toggle',
+			attr: { title: 'Hide score columns; keep Item, W.A., and Rank visible' },
+		});
+		foldColsBtn.addEventListener('click', () => {
+			this._columnsFolded = !this._columnsFolded;
 			this._render();
 		});
 

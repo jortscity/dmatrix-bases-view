@@ -171,22 +171,34 @@
 	vertical-align: middle;
 }
 
-/* Criterion headers wrap to 2 lines at narrowest legible size. */
+/* Criterion headers use vertical text to stay narrow at any view width. */
 .dmv-th-criterion {
-	min-width: 60px;
-	max-width: 86px;
-	white-space: normal;
-	word-break: break-word;
-	overflow-wrap: break-word;
-	display: table-cell;
-	line-height: 1.25;
+	width: 36px;
+	min-width: 28px;
+	max-width: 48px;
+	height: 80px;
+	white-space: nowrap;
+	overflow: hidden;
+	padding: 6px 4px;
+	vertical-align: bottom;
+}
+
+.dmv-criterion-label {
+	display: block;
+	writing-mode: vertical-lr;
+	transform: rotate(180deg);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: clip;
+	max-height: 68px;
 	font-size: 10px;
+	line-height: 1.2;
 }
 
 .dmv-th-weight {
-	min-width: 60px;
-	max-width: 86px;
-	padding: 3px 10px 6px;
+	min-width: 28px;
+	max-width: 48px;
+	padding: 3px 2px 6px;
 	font-size: 10px;
 	background: color-mix(in srgb, var(--background-secondary) 60%, transparent);
 	border-bottom: 2px solid var(--background-modifier-border);
@@ -220,7 +232,8 @@
 }
 
 .dmv-weight-input {
-	width: 48px;
+	width: 100%;
+	max-width: 44px;
 	padding: 2px 4px;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-s);
@@ -771,10 +784,14 @@
 
 /* Tighter score columns when Rank Raws is active */
 .dmv-table--rank-raws .dmv-th-criterion {
-	min-width: 40px;
-	max-width: 56px;
+	width: 28px;
+	min-width: 22px;
+	max-width: 36px;
+	padding: 4px 2px;
+}
+
+.dmv-table--rank-raws .dmv-criterion-label {
 	font-size: 9px;
-	padding: 6px 3px;
 }
 
 .dmv-table--rank-raws .dmv-td-score {

@@ -1,4 +1,4 @@
-import { BasesView, BasesViewConfig, BasesEntryGroup, Notice, setIcon } from 'obsidian';
+import { BasesView, BasesViewConfig, BasesEntryGroup, Modal, Notice, setIcon } from 'obsidian';
 import type { QueryController } from 'obsidian';
 import type DecisionMatrixPlugin from './main.ts';
 import type { DecisionItem, ItemGroup, ScoreScale } from './types.ts';
@@ -18,6 +18,7 @@ export class DecisionMatrixView extends BasesView {
 	private _weightsFromNote = false;
 	private _collapsedGroups: Set<string> = new Set();
 	private _rankRaws = false;
+	private _columnsFolded = false;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: DecisionMatrixPlugin) {
 		super(controller);
@@ -90,7 +91,11 @@ export class DecisionMatrixView extends BasesView {
 
 		const scorePrefix = this.plugin.settings.scorePrefix;
 
-		// Raw scores table
+		// Raw scores table — hidden entirely when columns are folded
+		if (this._columnsFolded) {
+			rawSection.style.display = 'none';
+		}
+
 		renderRawTable(rawSection, groups, criteria, scale,
 			async (item, criterion, newVal) => {
 				await this.app.fileManager.processFrontMatter(item.file, (fm: Record<string, unknown>) => {
@@ -110,6 +115,7 @@ export class DecisionMatrixView extends BasesView {
 			},
 			this._rankRaws,
 			rankedScores,
+			this._columnsFolded,
 		);
 
 		// Weighted scores table
@@ -133,6 +139,7 @@ export class DecisionMatrixView extends BasesView {
 			},
 			this._rankRaws,
 			rankedScores,
+			this._columnsFolded,
 		);
 	}
 
@@ -260,6 +267,18 @@ export class DecisionMatrixView extends BasesView {
 
 		toolbar.createEl('div', { cls: 'dmv-toolbar-separator' });
 
+		const foldColsBtn = toolbar.createEl('button', {
+			text: 'Fold Cols',
+			cls: this._columnsFolded ? 'dmv-btn dmv-btn--toggle is-active' : 'dmv-btn dmv-btn--toggle',
+			attr: { title: 'Hide score columns; keep Item, W.A., and Rank visible' },
+		});
+		foldColsBtn.addEventListener('click', () => {
+			this._columnsFolded = !this._columnsFolded;
+			this._render();
+		});
+
+		toolbar.createEl('div', { cls: 'dmv-toolbar-separator' });
+
 		// Normalize button — disabled while Rank Raws is active
 		const normalizeBtn = toolbar.createEl('button', {
 			text: 'Normalize',
@@ -307,6 +326,17 @@ export class DecisionMatrixView extends BasesView {
 			return;
 		}
 
+		const criteriaNames = [...scalingMap.keys()].join(', ');
+		const confirmed = await new Promise<boolean>(resolve => {
+			new NormalizeConfirmModal(
+				this.app,
+				`This will overwrite raw scores for ${scalingMap.size} criterion${scalingMap.size > 1 ? 'a' : ''}: ${criteriaNames}. This cannot be undone.`,
+				resolve,
+			).open();
+		});
+
+		if (!confirmed) return;
+
 		for (const item of items) {
 			await this.app.fileManager.processFrontMatter(item.file, (fm: Record<string, unknown>) => {
 				for (const [c, divisor] of scalingMap) {
@@ -317,7 +347,36 @@ export class DecisionMatrixView extends BasesView {
 			});
 		}
 
-		const criteriaNames = [...scalingMap.keys()].join(', ');
 		new Notice(`Normalized ${scalingMap.size} criterion${scalingMap.size > 1 ? 'a' : ''}: ${criteriaNames}`);
+	}
+}
+
+class NormalizeConfirmModal extends Modal {
+	private message: string;
+	private onSubmit: (confirmed: boolean) => void;
+
+	constructor(app: import('obsidian').App, message: string, onSubmit: (confirmed: boolean) => void) {
+		super(app);
+		this.message = message;
+		this.onSubmit = onSubmit;
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.createEl('p', { text: this.message });
+		const btnRow = contentEl.createEl('div', { cls: 'modal-button-container' });
+		btnRow.createEl('button', { text: 'Cancel' }).addEventListener('click', () => {
+			this.onSubmit(false);
+			this.close();
+		});
+		const confirmBtn = btnRow.createEl('button', { text: 'Normalize', cls: 'mod-cta mod-warning' });
+		confirmBtn.addEventListener('click', () => {
+			this.onSubmit(true);
+			this.close();
+		});
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
 	}
 }

@@ -171,22 +171,40 @@
 	vertical-align: middle;
 }
 
-/* Criterion headers wrap to 2 lines at narrowest legible size. */
+/* Criterion headers: horizontal by default, vertical when table overflows (dmv-table--compact). */
 .dmv-th-criterion {
-	min-width: 60px;
-	max-width: 86px;
-	white-space: normal;
-	word-break: break-word;
-	overflow-wrap: break-word;
-	display: table-cell;
-	line-height: 1.25;
+	white-space: nowrap;
+	overflow: hidden;
+	padding: 6px 4px;
+	vertical-align: bottom;
+}
+
+.dmv-criterion-label {
+	display: block;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 	font-size: 10px;
+	line-height: 1.2;
+}
+
+.dmv-table--compact .dmv-th-criterion {
+	height: 80px;
+}
+
+.dmv-table--compact .dmv-criterion-label {
+	writing-mode: vertical-lr;
+	transform: rotate(180deg);
+	text-overflow: clip;
+	max-height: 68px;
+	overflow: hidden;
+	width: 100%;
 }
 
 .dmv-th-weight {
-	min-width: 60px;
-	max-width: 86px;
-	padding: 3px 10px 6px;
+	min-width: 28px;
+	max-width: 48px;
+	padding: 3px 2px 6px;
 	font-size: 10px;
 	background: color-mix(in srgb, var(--background-secondary) 60%, transparent);
 	border-bottom: 2px solid var(--background-modifier-border);
@@ -220,7 +238,8 @@
 }
 
 .dmv-weight-input {
-	width: 48px;
+	width: 100%;
+	max-width: 44px;
 	padding: 2px 4px;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-s);
@@ -270,16 +289,22 @@
 .dmv-td-score {
 	font-family: var(--font-monospace);
 	font-size: var(--font-ui-smaller);
+	white-space: nowrap;
+	min-width: 2ch;
 }
 
 .dmv-td-avg {
 	font-family: var(--font-monospace);
 	font-weight: 700;
+	white-space: nowrap;
+	min-width: 3ch;
 }
 
 .dmv-td-rank {
 	font-weight: 700;
 	color: var(--text-muted);
+	white-space: nowrap;
+	min-width: 3ch;
 }
 
 .dmv-td-scale {
@@ -297,10 +322,15 @@
 	background: color-mix(in srgb, var(--interactive-accent) 10%, transparent) !important;
 }
 
-.dmv-td-editable:hover .dmv-score-display::after {
-	content: ' ✎';
-	font-size: 10px;
+.dmv-td-editable:hover::after {
+	content: '✎';
+	position: absolute;
+	top: 1px;
+	right: 2px;
+	font-size: 9px;
 	opacity: 0.45;
+	pointer-events: none;
+	line-height: 1;
 }
 
 .dmv-td--editing {
@@ -769,12 +799,13 @@
 	padding: 6px 4px;
 }
 
-/* Tighter score columns when Rank Raws is active */
-.dmv-table--rank-raws .dmv-th-criterion {
-	min-width: 40px;
-	max-width: 56px;
+/* Tighter score columns when Rank Raws is active (only matters in compact/vertical mode) */
+.dmv-table--rank-raws.dmv-table--compact .dmv-th-criterion {
+	padding: 4px 2px;
+}
+
+.dmv-table--rank-raws .dmv-criterion-label {
 	font-size: 9px;
-	padding: 6px 3px;
 }
 
 .dmv-table--rank-raws .dmv-td-score {

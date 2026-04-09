@@ -1,6 +1,6 @@
 {
 	"name": "decision-matrix-bases-view",
-	"version": "1.0.0",
+	"version": "0.5.0",
 	"description": "A weighted decision matrix custom view for Obsidian Bases",
 	"main": "main.js",
 	"scripts": {

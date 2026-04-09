@@ -171,12 +171,8 @@
 	vertical-align: middle;
 }
 
-/* Criterion headers use vertical text to stay narrow at any view width. */
+/* Criterion headers: horizontal by default, vertical when table overflows (dmv-table--compact). */
 .dmv-th-criterion {
-	width: 36px;
-	min-width: 28px;
-	max-width: 48px;
-	height: 80px;
 	white-space: nowrap;
 	overflow: hidden;
 	padding: 6px 4px;
@@ -185,14 +181,24 @@
 
 .dmv-criterion-label {
 	display: block;
-	writing-mode: vertical-lr;
-	transform: rotate(180deg);
 	white-space: nowrap;
 	overflow: hidden;
-	text-overflow: clip;
-	max-height: 68px;
+	text-overflow: ellipsis;
 	font-size: 10px;
 	line-height: 1.2;
+}
+
+.dmv-table--compact .dmv-th-criterion {
+	height: 80px;
+}
+
+.dmv-table--compact .dmv-criterion-label {
+	writing-mode: vertical-lr;
+	transform: rotate(180deg);
+	text-overflow: clip;
+	max-height: 68px;
+	overflow: hidden;
+	width: 100%;
 }
 
 .dmv-th-weight {
@@ -283,16 +289,22 @@
 .dmv-td-score {
 	font-family: var(--font-monospace);
 	font-size: var(--font-ui-smaller);
+	white-space: nowrap;
+	min-width: 2ch;
 }
 
 .dmv-td-avg {
 	font-family: var(--font-monospace);
 	font-weight: 700;
+	white-space: nowrap;
+	min-width: 3ch;
 }
 
 .dmv-td-rank {
 	font-weight: 700;
 	color: var(--text-muted);
+	white-space: nowrap;
+	min-width: 3ch;
 }
 
 .dmv-td-scale {
@@ -310,10 +322,15 @@
 	background: color-mix(in srgb, var(--interactive-accent) 10%, transparent) !important;
 }
 
-.dmv-td-editable:hover .dmv-score-display::after {
-	content: ' ✎';
-	font-size: 10px;
+.dmv-td-editable:hover::after {
+	content: '✎';
+	position: absolute;
+	top: 1px;
+	right: 2px;
+	font-size: 9px;
 	opacity: 0.45;
+	pointer-events: none;
+	line-height: 1;
 }
 
 .dmv-td--editing {
@@ -782,11 +799,8 @@
 	padding: 6px 4px;
 }
 
-/* Tighter score columns when Rank Raws is active */
-.dmv-table--rank-raws .dmv-th-criterion {
-	width: 28px;
-	min-width: 22px;
-	max-width: 36px;
+/* Tighter score columns when Rank Raws is active (only matters in compact/vertical mode) */
+.dmv-table--rank-raws.dmv-table--compact .dmv-th-criterion {
 	padding: 4px 2px;
 }
 

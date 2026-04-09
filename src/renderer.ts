@@ -85,6 +85,7 @@ export function renderRawTable(
 
 	const headerRow = thead.createEl('tr');
 	headerRow.createEl('th', { text: 'Item', cls: 'dmv-th dmv-th-item' });
+
 	if (!columnsFolded) {
 		for (const c of criteria) {
 			const th = headerRow.createEl('th', { cls: 'dmv-th dmv-th-criterion' });
@@ -142,6 +143,12 @@ export function renderRawTable(
 			}
 		}
 	}
+
+	requestAnimationFrame(() => {
+		if (table.scrollWidth > wrap.clientWidth) {
+			table.classList.add('dmv-table--compact');
+		}
+	});
 }
 
 /**
@@ -390,6 +397,12 @@ export function renderWeightedTable(
 			if (rank <= 3) rankTd.classList.add(`dmv-rank--top-${rank}`);
 		}
 	}
+
+	requestAnimationFrame(() => {
+		if (table.scrollWidth > wrap.clientWidth) {
+			table.classList.add('dmv-table--compact');
+		}
+	});
 }
 
 

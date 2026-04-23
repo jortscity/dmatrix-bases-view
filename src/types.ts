@@ -18,11 +18,17 @@ export interface ItemGroup {
 export interface PluginSettings {
 	scale: ScoreScale;
 	scorePrefix: string;
+	publishEndpoint: string;
+	publishToken: string;
+	embedHeight: string;
 }
 
 export const DEFAULT_PLUGIN_SETTINGS: PluginSettings = {
 	scale: 10,
 	scorePrefix: '',
+	publishEndpoint: '',
+	publishToken: '',
+	embedHeight: '520px',
 };
 
 export const ROW_HEIGHT = 36;

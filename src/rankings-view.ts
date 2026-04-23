@@ -4,6 +4,8 @@ import type DecisionMatrixPlugin from './main.ts';
 import type { DecisionItem, ItemGroup } from './types.ts';
 import { detectCriteriaFromFiles, extractItem } from './field-mapping.ts';
 import { computeRankedScores } from './renderer.ts';
+import { exportViewAsHtml } from './html-exporter.ts';
+import { publishHtml, buildEmbed } from './publisher.ts';
 
 interface RankedItem {
 	item: DecisionItem;
@@ -79,6 +81,16 @@ export class DecisionMatrixRankingsView extends BasesView {
 			this._rankRaws = !this._rankRaws;
 			this._render();
 		});
+
+		toolbar.createEl('div', { cls: 'dmv-toolbar-separator' });
+
+		const publishBtn = toolbar.createEl('button', {
+			cls: 'dmv-btn dmv-btn--publish',
+			attr: { title: 'Publish this view to your configured endpoint and embed it in the active note' },
+		});
+		setIcon(publishBtn, 'upload-cloud');
+		publishBtn.createEl('span', { text: 'Publish' });
+		publishBtn.addEventListener('click', () => this._publish());
 
 		if (ranked.length === 0) {
 			container.createEl('div', { text: 'No items to rank.', cls: 'dmv-empty' });
@@ -234,6 +246,24 @@ export class DecisionMatrixRankingsView extends BasesView {
 			const pct = maxAvg > 0 ? Math.round((ri.avg / maxAvg) * 100) : 0;
 			const bar = barWrap.createEl('div', { cls: 'dmr-bar' });
 			bar.style.setProperty('--dmr-bar-target', `${pct}%`);
+		}
+	}
+
+	private async _publish(): Promise<void> {
+		try {
+			const html = await exportViewAsHtml(this.rootEl, this.config?.name || 'Rankings', this.plugin);
+			const result = await publishHtml(html, this.config?.name || 'Rankings', this.plugin.settings);
+
+			const activeFile = this.app.workspace.getActiveFile();
+			if (activeFile) {
+				const embed = buildEmbed(result.url, this.plugin.settings.embedHeight);
+				await this.app.vault.process(activeFile, content => content + embed);
+				new Notice(`Published! Embed inserted into "${activeFile.basename}".`);
+			} else {
+				new Notice(`Published! URL: ${result.url}`);
+			}
+		} catch (err) {
+			new Notice(`Publish failed: ${err instanceof Error ? err.message : String(err)}`);
 		}
 	}
 

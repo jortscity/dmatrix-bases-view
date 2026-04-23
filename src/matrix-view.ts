@@ -5,6 +5,8 @@ import type { DecisionItem, ItemGroup, ScoreScale } from './types.ts';
 import { SCALES } from './types.ts';
 import { detectCriteria, detectCriteriaFromFiles, extractItem } from './field-mapping.ts';
 import { buildMatrixScaffold, renderRawTable, renderWeightedTable, computeRankedScores } from './renderer.ts';
+import { exportViewAsHtml } from './html-exporter.ts';
+import { publishHtml, buildEmbed } from './publisher.ts';
 
 export class DecisionMatrixView extends BasesView {
 	type = 'decision-matrix';
@@ -295,6 +297,35 @@ export class DecisionMatrixView extends BasesView {
 			normalizeBtn.addEventListener('click', async () => {
 				await this._normalizeScores(items, criteria, currentScale);
 			});
+		}
+
+		toolbar.createEl('div', { cls: 'dmv-toolbar-separator' });
+
+		const publishBtn = toolbar.createEl('button', {
+			cls: 'dmv-btn dmv-btn--publish',
+			attr: { title: 'Publish this view to your configured endpoint and embed it in the active note' },
+		});
+		setIcon(publishBtn, 'upload-cloud');
+		publishBtn.createEl('span', { text: 'Publish' });
+		publishBtn.addEventListener('click', () => this._publish());
+	}
+
+	private async _publish(): Promise<void> {
+		try {
+			const html = await exportViewAsHtml(this.rootEl, this.config.name || 'Decision Matrix', this.plugin);
+			const result = await publishHtml(html, this.config.name || 'Decision Matrix', this.plugin.settings);
+
+			// Insert iframe embed into the active note
+			const activeFile = this.app.workspace.getActiveFile();
+			if (activeFile) {
+				const embed = buildEmbed(result.url, this.plugin.settings.embedHeight);
+				await this.app.vault.process(activeFile, content => content + embed);
+				new Notice(`Published! Embed inserted into "${activeFile.basename}".`);
+			} else {
+				new Notice(`Published! URL: ${result.url}`);
+			}
+		} catch (err) {
+			new Notice(`Publish failed: ${err instanceof Error ? err.message : String(err)}`);
 		}
 	}
 

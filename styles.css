@@ -93,6 +93,28 @@
 	height: 14px;
 }
 
+/* Publish button */
+.dmv-btn--publish {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 3px 10px;
+	color: var(--text-on-accent);
+	background: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+}
+
+.dmv-btn--publish:hover {
+	filter: brightness(1.08);
+	background: var(--interactive-accent);
+}
+
+.dmv-btn--publish svg {
+	width: 13px;
+	height: 13px;
+	flex-shrink: 0;
+}
+
 /* ── Embed hint banner ─────────────────────────────────────── */
 .dmv-embed-hint {
 	padding: 7px 12px;

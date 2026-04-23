@@ -82,6 +82,50 @@ class DecisionMatrixSettingsTab extends PluginSettingTab {
 			cls: 'setting-item-description',
 		});
 
+		containerEl.createEl('h3', { text: 'Publish' });
+		containerEl.createEl('p', {
+			cls: 'setting-item-description',
+			text: 'The Publish button in each view POSTs { html, title } (JSON) to your endpoint and expects { url } back. The returned URL is embedded as an <iframe> in the active note. See README for a minimal server example.',
+		});
+
+		new Setting(containerEl)
+			.setName('Publish endpoint')
+			.setDesc('URL that receives the rendered HTML and returns a public URL.')
+			.addText(text => {
+				text.setPlaceholder('https://your-server.example.com/publish')
+					.setValue(this.plugin.settings.publishEndpoint)
+					.onChange(async (value) => {
+						this.plugin.settings.publishEndpoint = value;
+						await this.plugin.saveSettings();
+					});
+				text.inputEl.style.width = '100%';
+			});
+
+		new Setting(containerEl)
+			.setName('Auth token (optional)')
+			.setDesc('Sent as Bearer token in the Authorization header. Leave blank if your endpoint is public.')
+			.addText(text => {
+				text.inputEl.type = 'password';
+				text.setPlaceholder('••••••••')
+					.setValue(this.plugin.settings.publishToken)
+					.onChange(async (value) => {
+						this.plugin.settings.publishToken = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName('Embed height')
+			.setDesc('Height of the <iframe> inserted into the note (e.g. 520px, 60vh).')
+			.addText(text => {
+				text.setPlaceholder('520px')
+					.setValue(this.plugin.settings.embedHeight)
+					.onChange(async (value) => {
+						this.plugin.settings.embedHeight = value || '520px';
+						await this.plugin.saveSettings();
+					});
+			});
+
 		containerEl.createEl('h3', { text: 'Examples' });
 
 		new Setting(containerEl)

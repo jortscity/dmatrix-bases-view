@@ -17,7 +17,7 @@ export class DecisionMatrixView extends BasesView {
 	private _weights: Record<string, number> = {};
 	private _weightsFromNote = false;
 	private _collapsedGroups: Set<string> = new Set();
-	private _rankRaws = false;
+	private _rankRawsColumns: Set<string> = new Set();
 	private _columnsFolded = false;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: DecisionMatrixPlugin) {
@@ -68,7 +68,7 @@ export class DecisionMatrixView extends BasesView {
 		}));
 		const items = groups.flatMap(g => g.items);
 
-		const rankedScores = this._rankRaws
+		const rankedScores = this._rankRawsColumns.size > 0
 			? computeRankedScores(groups, criteria, scale)
 			: undefined;
 
@@ -113,8 +113,16 @@ export class DecisionMatrixView extends BasesView {
 				}
 				this._render();
 			},
-			this._rankRaws,
+			this._rankRawsColumns,
 			rankedScores,
+			(criterion, checked) => {
+				if (checked) {
+					this._rankRawsColumns.add(criterion);
+				} else {
+					this._rankRawsColumns.delete(criterion);
+				}
+				this._render();
+			},
 			this._columnsFolded,
 		);
 
@@ -137,7 +145,7 @@ export class DecisionMatrixView extends BasesView {
 				}
 				this._render();
 			},
-			this._rankRaws,
+			this._rankRawsColumns,
 			rankedScores,
 			this._columnsFolded,
 		);
@@ -255,18 +263,6 @@ export class DecisionMatrixView extends BasesView {
 
 		toolbar.createEl('div', { cls: 'dmv-toolbar-separator' });
 
-		const rankRawsBtn = toolbar.createEl('button', {
-			text: 'Rank Raws',
-			cls: this._rankRaws ? 'dmv-btn dmv-btn--toggle is-active' : 'dmv-btn dmv-btn--toggle',
-			attr: { title: 'Rank each criterion relative to its column max; use ranks in weighted scoring' },
-		});
-		rankRawsBtn.addEventListener('click', () => {
-			this._rankRaws = !this._rankRaws;
-			this._render();
-		});
-
-		toolbar.createEl('div', { cls: 'dmv-toolbar-separator' });
-
 		const foldColsBtn = toolbar.createEl('button', {
 			text: 'Fold Cols',
 			cls: this._columnsFolded ? 'dmv-btn dmv-btn--toggle is-active' : 'dmv-btn dmv-btn--toggle',
@@ -279,17 +275,18 @@ export class DecisionMatrixView extends BasesView {
 
 		toolbar.createEl('div', { cls: 'dmv-toolbar-separator' });
 
-		// Normalize button — disabled while Rank Raws is active
+		// Normalize button — disabled while any Rank Raws columns are active
+		const anyRankRaws = this._rankRawsColumns.size > 0;
 		const normalizeBtn = toolbar.createEl('button', {
 			text: 'Normalize',
-			cls: this._rankRaws ? 'dmv-btn dmv-btn--disabled' : 'dmv-btn',
+			cls: anyRankRaws ? 'dmv-btn dmv-btn--disabled' : 'dmv-btn',
 			attr: {
-				title: this._rankRaws
+				title: anyRankRaws
 					? 'Disabled while Rank Raws is active'
 					: `Per-criterion: any value exceeding /${currentScale} is scaled down by that criterion's max`,
 			},
 		});
-		if (this._rankRaws) {
+		if (anyRankRaws) {
 			normalizeBtn.setAttribute('disabled', 'true');
 		} else {
 			normalizeBtn.addEventListener('click', async () => {

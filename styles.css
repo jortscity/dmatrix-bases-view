@@ -787,40 +787,44 @@
 	pointer-events: none;
 }
 
-/* Rank column header in raw table */
-.dmv-th-rank-col {
-	min-width: 28px;
-	width: 28px;
+/* Rank raws toggle row in raw table thead */
+.dmv-rank-raws-row {
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.dmv-rank-raws-label {
+	text-align: left;
+	font-size: 11px;
+	color: var(--text-faint);
 	font-style: italic;
+	padding: 3px 10px;
+	white-space: nowrap;
+	background: var(--background-secondary);
+	vertical-align: middle;
+}
+
+.dmv-rank-raws-cell {
+	background: var(--background-secondary);
+	padding: 3px 4px !important;
+	text-align: center;
+	vertical-align: middle;
+}
+
+.dmv-rank-raws-cb {
+	cursor: pointer;
+	display: inline-block;
+	margin: 0 !important;
+	padding: 0 !important;
+	vertical-align: middle;
+	accent-color: var(--interactive-accent);
+}
+
+/* Small raw score shown below rank value in ranked cells */
+.dmv-score-raw-sub {
+	display: block;
 	font-size: 9px;
 	color: var(--text-faint);
-	background: color-mix(in srgb, var(--background-secondary) 70%, var(--interactive-accent) 5%);
-	white-space: nowrap;
-	padding: 6px 4px;
-}
-
-/* Tighter score columns when Rank Raws is active (only matters in compact/vertical mode) */
-.dmv-table--rank-raws.dmv-table--compact .dmv-th-criterion {
-	padding: 4px 2px;
-}
-
-.dmv-table--rank-raws .dmv-criterion-label {
-	font-size: 9px;
-}
-
-.dmv-table--rank-raws .dmv-td-score {
-	padding: 5px 3px;
-}
-
-/* Read-only rank cell in raw table */
-.dmv-td-rank-raw {
 	font-style: italic;
-	font-size: 9px;
-	color: var(--text-muted);
-	background: color-mix(in srgb, var(--background-secondary) 50%, transparent);
-	cursor: default;
-	white-space: nowrap;
-	min-width: 28px;
-	width: 28px;
-	padding: 5px 4px;
+	line-height: 1;
+	margin-top: 2px;
 }

@@ -73,15 +73,30 @@ export function renderRawTable(
 	scorePrefix?: string,
 	collapsedGroups?: Set<string>,
 	onToggleGroup?: (key: string) => void,
-	rankRaws?: boolean,
+	rankRawsColumns?: Set<string>,
 	rankedScores?: Map<string, Record<string, number>>,
+	onToggleRankRaw?: (criterion: string, checked: boolean) => void,
 	columnsFolded?: boolean,
 ): void {
 	container.createEl('h3', { text: 'Raw Scores', cls: 'dmv-section-title' });
 
 	const wrap = container.createEl('div', { cls: 'dmv-table-wrap' });
-	const table = wrap.createEl('table', { cls: rankRaws ? 'dmv-table dmv-table--rank-raws' : 'dmv-table' });
+	const table = wrap.createEl('table', { cls: 'dmv-table' });
 	const thead = table.createEl('thead');
+
+	if (!columnsFolded) {
+		const rankRawsRow = thead.createEl('tr', { cls: 'dmv-rank-raws-row' });
+		rankRawsRow.createEl('td', { text: 'Rank Raws', cls: 'dmv-td dmv-rank-raws-label' });
+		for (const c of criteria) {
+			const cell = rankRawsRow.createEl('td', { cls: 'dmv-td dmv-rank-raws-cell' });
+			const cb = cell.createEl('input', { type: 'checkbox', cls: 'dmv-rank-raws-cb' });
+			cb.checked = rankRawsColumns?.has(c) ?? false;
+			cb.addEventListener('change', (e: Event) => {
+				e.stopPropagation();
+				if (onToggleRankRaw) onToggleRankRaw(c, cb.checked);
+			});
+		}
+	}
 
 	const headerRow = thead.createEl('tr');
 	headerRow.createEl('th', { text: 'Item', cls: 'dmv-th dmv-th-item' });
@@ -90,9 +105,6 @@ export function renderRawTable(
 		for (const c of criteria) {
 			const th = headerRow.createEl('th', { cls: 'dmv-th dmv-th-criterion' });
 			th.createEl('span', { text: formatCriterionName(c, scorePrefix), cls: 'dmv-criterion-label' });
-			if (rankRaws) {
-				headerRow.createEl('th', { text: 'N', cls: 'dmv-th dmv-th-rank-col' });
-			}
 		}
 	}
 
@@ -105,7 +117,7 @@ export function renderRawTable(
 		// Render group header row for named groups
 		if (hasGroupKey) {
 			const groupTr = tbody.createEl('tr', { cls: 'dmv-group-header' });
-			const colCount = columnsFolded ? 1 : (rankRaws ? criteria.length * 2 + 1 : criteria.length + 1);
+			const colCount = columnsFolded ? 1 : criteria.length + 1;
 			const groupTd = groupTr.createEl('td', {
 				attr: { colspan: String(colCount) },
 			});
@@ -131,14 +143,10 @@ export function renderRawTable(
 			if (!columnsFolded) {
 				for (const c of criteria) {
 					const score = item.scores[c] ?? null;
+					const isRanked = rankRawsColumns?.has(c) ?? false;
+					const rankVal = isRanked ? (rankedScores?.get(item.id)?.[c] ?? undefined) : undefined;
 					const td = tr.createEl('td', { cls: 'dmv-td dmv-td-score dmv-td-editable' });
-					renderEditableScore(td, score, scale, (newVal) => onScoreEdit(item, c, newVal), rankRaws);
-					if (rankRaws) {
-						const rankVal = rankedScores?.get(item.id)?.[c] ?? 0;
-						const rankTd = tr.createEl('td', { cls: 'dmv-td dmv-td-score dmv-td-rank-raw' });
-						rankTd.createEl('span', { text: String(rankVal), cls: 'dmv-score-display' });
-						colorScoreCell(rankTd, rankVal, scale);
-					}
+					renderEditableScore(td, score, scale, (newVal) => onScoreEdit(item, c, newVal), rankVal);
 				}
 			}
 		}
@@ -153,61 +161,65 @@ export function renderRawTable(
 
 /**
  * Renders a score cell that toggles into an inline input on click.
- * No clamping — users can enter any value; color coding handles indication.
- * When allowDecimals is true, values are not rounded to integers.
+ * When rankDisplay is provided, shows the rank as the main value with the raw score below;
+ * clicking still edits the underlying raw score.
  */
 function renderEditableScore(
 	td: HTMLElement,
 	score: number | null,
 	scale: ScoreScale,
 	onCommit: (value: number) => void,
-	allowDecimals = false,
+	rankDisplay?: number,
 ): void {
 	td.empty();
-	td.createEl('span', { text: score === null ? '' : String(score), cls: 'dmv-score-display' });
-	if (score !== null) colorScoreCell(td, score, scale);
+	td.classList.remove('dmv-score--high', 'dmv-score--mid', 'dmv-score--low', 'dmv-score--over');
+
+	if (rankDisplay !== undefined) {
+		td.createEl('span', { text: String(rankDisplay), cls: 'dmv-score-display' });
+		colorScoreCell(td, rankDisplay, scale);
+		if (score !== null) {
+			td.createEl('span', { text: String(score), cls: 'dmv-score-raw-sub' });
+		}
+	} else {
+		td.createEl('span', { text: score === null ? '' : String(score), cls: 'dmv-score-display' });
+		if (score !== null) colorScoreCell(td, score, scale);
+	}
 
 	td.addEventListener('click', () => {
 		if (td.querySelector('input')) return;
 
 		td.empty();
+		td.classList.remove('dmv-score--high', 'dmv-score--mid', 'dmv-score--low', 'dmv-score--over');
 		td.classList.add('dmv-td--editing');
 
 		const input = td.createEl('input', {
 			cls: 'dmv-score-input',
 			type: 'number',
-			attr: { min: '0', step: allowDecimals ? '0.01' : '1' },
+			attr: { min: '0', step: '1' },
 		});
 		input.value = score === null ? '' : String(score);
 		input.select();
 
+		const restore = () => {
+			td.classList.remove('dmv-td--editing');
+			renderEditableScore(td, score, scale, onCommit, rankDisplay);
+		};
+
 		const commit = () => {
 			const v = parseFloat(input.value);
 			if (isNaN(v)) {
-				// Blank input — restore previous display without writing
-				td.classList.remove('dmv-td--editing');
-				td.empty();
-				td.createEl('span', { text: score === null ? '' : String(score), cls: 'dmv-score-display' });
-				if (score !== null) colorScoreCell(td, score, scale);
+				restore();
 				return;
 			}
-			const val = allowDecimals ? Math.max(0, v) : Math.max(0, Math.round(v));
-			td.classList.remove('dmv-td--editing');
-			td.empty();
-			td.createEl('span', { text: String(val), cls: 'dmv-score-display' });
-			colorScoreCell(td, val, scale);
+			const val = Math.max(0, Math.round(v));
+			restore();
 			onCommit(val);
 		};
 
 		input.addEventListener('blur', commit);
 		input.addEventListener('keydown', (e: KeyboardEvent) => {
 			if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-			if (e.key === 'Escape') {
-				td.classList.remove('dmv-td--editing');
-				td.empty();
-				td.createEl('span', { text: score === null ? '' : String(score), cls: 'dmv-score-display' });
-				if (score !== null) colorScoreCell(td, score, scale);
-			}
+			if (e.key === 'Escape') { restore(); }
 		});
 
 		input.focus();
@@ -217,17 +229,17 @@ function renderEditableScore(
 function resolveScores(
 	item: DecisionItem,
 	criteria: string[],
-	rankRaws: boolean,
+	rankRawsColumns: Set<string>,
 	rankedScores: Map<string, Record<string, number>> | undefined,
 ): Record<string, number> {
-	if (rankRaws && rankedScores) {
-		const ranked = rankedScores.get(item.id) ?? {};
-		const out: Record<string, number> = {};
-		for (const c of criteria) out[c] = ranked[c] ?? 0;
-		return out;
-	}
 	const out: Record<string, number> = {};
-	for (const c of criteria) out[c] = item.scores[c] ?? 0;
+	for (const c of criteria) {
+		if (rankRawsColumns.has(c) && rankedScores) {
+			out[c] = rankedScores.get(item.id)?.[c] ?? 0;
+		} else {
+			out[c] = item.scores[c] ?? 0;
+		}
+	}
 	return out;
 }
 
@@ -261,7 +273,7 @@ export function renderWeightedTable(
 	scorePrefix?: string,
 	collapsedGroups?: Set<string>,
 	onToggleGroup?: (key: string) => void,
-	rankRaws?: boolean,
+	rankRawsColumns?: Set<string>,
 	rankedScores?: Map<string, Record<string, number>>,
 	columnsFolded?: boolean,
 ): void {
@@ -320,7 +332,7 @@ export function renderWeightedTable(
 	// Flatten all items across groups for ranking purposes
 	const allItems = groups.flatMap(g => g.items);
 	const weightedAvgs = allItems.map(item => {
-		const eff = resolveScores(item, criteria, rankRaws ?? false, rankedScores);
+		const eff = resolveScores(item, criteria, rankRawsColumns ?? new Set(), rankedScores);
 		return { item, avg: computeWeightedAvgFromScores(eff, criteria, weights) };
 	});
 	weightedAvgs.sort((a, b) => b.avg - a.avg);
@@ -376,7 +388,7 @@ export function renderWeightedTable(
 			nameTd.textContent = item.title;
 			nameTd.addEventListener('click', (e: MouseEvent) => onItemClick(item, e));
 
-			const effectiveScores = resolveScores(item, criteria, rankRaws ?? false, rankedScores);
+			const effectiveScores = resolveScores(item, criteria, rankRawsColumns ?? new Set(), rankedScores);
 			if (!columnsFolded) {
 				for (const c of criteria) {
 					const score = effectiveScores[c];

@@ -30,7 +30,7 @@ export class DecisionMatrixView extends DecisionMatrixBaseView {
 
 	onunload(): void {}
 
-	private _render(): void {
+	protected _render(): void {
 		const container = this.rootEl;
 		if (!this.data) return;
 		container.empty();

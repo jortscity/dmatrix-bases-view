@@ -1,7 +1,7 @@
 {
 	"id": "decision-matrix-bases-view",
 	"name": "Decision Matrix Bases View",
-	"version": "0.7.1",
+	"version": "0.7.2",
 	"minAppVersion": "1.9.10",
 	"description": "A weighted decision matrix view for Bases. Score options across criteria, apply weights, and see ranked results.",
 	"author": "jortscity",

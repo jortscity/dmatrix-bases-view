@@ -310,8 +310,8 @@
 	position: relative;
 }
 
-.dmv-td-editable:hover {
-	background: color-mix(in srgb, var(--interactive-accent) 10%, transparent) !important;
+.dmv-root .dmv-td-editable:hover {
+	background: color-mix(in srgb, var(--interactive-accent) 10%, transparent);
 }
 
 .dmv-td-editable:hover::after {
@@ -362,20 +362,20 @@
 }
 
 /* ── Rank row highlighting — 3 tiers ───────────────────────── */
-.dmv-row--rank-1 {
-	background: color-mix(in srgb, var(--interactive-accent) 18%, transparent) !important;
+.dmv-root tr.dmv-row--rank-1 {
+	background: color-mix(in srgb, var(--interactive-accent) 18%, transparent);
 }
 
-.dmv-row--rank-2 {
-	background: color-mix(in srgb, var(--interactive-accent) 9%, transparent) !important;
+.dmv-root tr.dmv-row--rank-2 {
+	background: color-mix(in srgb, var(--interactive-accent) 9%, transparent);
 }
 
-.dmv-row--rank-3 {
-	background: color-mix(in srgb, var(--interactive-accent) 5%, transparent) !important;
+.dmv-root tr.dmv-row--rank-3 {
+	background: color-mix(in srgb, var(--interactive-accent) 5%, transparent);
 }
 
-.dmv-rank--top-1 {
-	color: var(--interactive-accent) !important;
+.dmv-root .dmv-rank--top-1 {
+	color: var(--interactive-accent);
 	font-weight: 700;
 }
 
@@ -494,9 +494,20 @@
 	line-height: 1;
 }
 
-.dmr-badge--1 { background: #F5C400; color: #5a4000; }
+@keyframes dmr-shimmer {
+	0%   { background-position: -150% 0; }
+	100% { background-position: 250% 0; }
+}
+
+.dmr-badge--1 {
+	background: linear-gradient(105deg, #F5C400 35%, #fff3a0 50%, #F5C400 65%);
+	background-size: 250% 100%;
+	color: #5a4000;
+	animation: dmr-shimmer 3s ease-in-out infinite;
+	animation-delay: 0.9s;
+}
 .dmr-badge--2 { background: #B8BFC7; color: #1e1e1e; }
-.dmr-badge--3 { background: #C47722; color: #fff; }
+.dmr-badge--3 { background: #C47722; color: #ffffff; }
 .dmr-badge--other { background: var(--background-modifier-border); color: var(--text-muted); }
 
 /* ── Podium ────────────────────────────────────────────────── */
@@ -513,6 +524,7 @@
 	display: flex;
 	flex-direction: column;
 	align-items: stretch;
+	animation: dmr-slide-up 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .dmr-pedestal::after {
@@ -551,6 +563,7 @@
 	flex-direction: column;
 	gap: 8px;
 	min-width: 0;
+	transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
 }
 
 .dmr-pedestal--1st .dmr-card { border-color: #F5C400; }
@@ -594,8 +607,7 @@
 }
 
 /* ── Score bar ─────────────────────────────────────────────── */
-.dmr-bar-wrap,
-.dmr-list-bar-wrap {
+.dmr-bar-wrap {
 	width: 100%;
 	height: 5px;
 	background: var(--background-modifier-border);
@@ -606,6 +618,12 @@
 
 .dmr-list-bar-wrap {
 	width: 44px;
+	height: 5px;
+	background: var(--background-modifier-border);
+	border-radius: 3px;
+	overflow: hidden;
+	flex-shrink: 0;
+	align-self: center;
 }
 
 .dmr-bar {
@@ -635,36 +653,26 @@
 }
 
 /* Podium: 2nd first, 3rd second, 1st last (building to the winner) */
-.dmr-pedestal {
-	animation: dmr-slide-up 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
-}
 .dmr-pedestal:nth-child(1) { animation-delay: 0.05s; } /* 2nd */
 .dmr-pedestal:nth-child(3) { animation-delay: 0.12s; } /* 3rd */
 .dmr-pedestal:nth-child(2) { animation-delay: 0.22s; } /* 1st — last */
 
 /* List items stagger is set inline via JS */
 .dmr-list-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-secondary);
+	min-width: 0;
+	transition: background 0.15s, transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+	cursor: default;
 	animation: dmr-fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
-/* ── Gold shimmer on #1 ────────────────────────────────────── */
-@keyframes dmr-shimmer {
-	0%   { background-position: -150% 0; }
-	100% { background-position: 250% 0; }
-}
-
-.dmr-badge--1 {
-	background: linear-gradient(105deg, #F5C400 35%, #fff3a0 50%, #F5C400 65%);
-	background-size: 250% 100%;
-	animation: dmr-shimmer 3s ease-in-out infinite;
-	animation-delay: 0.9s;
-}
-
 /* ── Card hover ────────────────────────────────────────────── */
-.dmr-card {
-	transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
-}
-
 .dmr-pedestal:hover .dmr-card {
 	transform: translateY(-4px);
 	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
@@ -684,19 +692,6 @@
 	display: grid;
 	grid-template-columns: 1fr 1fr;
 	gap: 6px;
-}
-
-.dmr-list-item {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	padding: 8px;
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-s);
-	background: var(--background-secondary);
-	min-width: 0;
-	transition: background 0.15s, transform 0.15s, border-color 0.15s, box-shadow 0.15s;
-	cursor: default;
 }
 
 .dmr-list-item:hover {
@@ -740,11 +735,6 @@
 
 .dmr-list-title:hover {
 	text-decoration: underline;
-}
-
-.dmr-list-bar-wrap {
-	flex-shrink: 0;
-	align-self: center;
 }
 
 /* ── Fallback cover icon ────────────────────────────────────── */
@@ -795,18 +785,18 @@
 	vertical-align: middle;
 }
 
-.dmv-rank-raws-cell {
+.dmv-root td.dmv-rank-raws-cell {
 	background: var(--background-secondary);
-	padding: 3px 4px !important;
+	padding: 3px 4px;
 	text-align: center;
 	vertical-align: middle;
 }
 
-.dmv-rank-raws-cb {
+.dmv-root .dmv-rank-raws-cb {
 	cursor: pointer;
 	display: inline-block;
-	margin: 0 !important;
-	padding: 0 !important;
+	margin: 0;
+	padding: 0;
 	vertical-align: middle;
 	accent-color: var(--interactive-accent);
 }

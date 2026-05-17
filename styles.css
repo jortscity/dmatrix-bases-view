@@ -122,6 +122,10 @@
 	margin-bottom: 18px;
 }
 
+.dmr-table-section {
+	margin-top: 12px;
+}
+
 .dmv-section-title {
 	font-size: var(--font-ui-medium);
 	font-weight: 600;
@@ -225,13 +229,6 @@
 	vertical-align: middle;
 }
 
-.dmv-th-scale {
-	min-width: 32px;
-	color: var(--text-faint);
-	font-weight: 400;
-	white-space: nowrap;
-}
-
 /* ── Weight inputs ─────────────────────────────────────────── */
 .dmv-th-weight--compact {
 	padding: 2px 4px;
@@ -305,11 +302,6 @@
 	color: var(--text-muted);
 	white-space: nowrap;
 	min-width: 3ch;
-}
-
-.dmv-td-scale {
-	color: var(--text-faint);
-	width: 28px;
 }
 
 /* ── Editable score cells ──────────────────────────────────── */
@@ -827,4 +819,55 @@
 	font-style: italic;
 	line-height: 1;
 	margin-top: 2px;
+}
+
+/* ── Fold Cols toolbar group ───────────────────────────────── */
+.dmv-fold-group {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.dmv-fold-input {
+	width: 40px;
+	padding: 3px 4px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: var(--font-ui-smaller);
+	text-align: center;
+}
+
+.dmv-fold-input:focus {
+	border-color: var(--interactive-accent);
+	outline: none;
+}
+
+/* ── Folded column indicator ───────────────────────────────── */
+.dmv-th-folded {
+	width: 22px;
+	min-width: 22px;
+	max-width: 26px;
+	padding: 4px 2px;
+	vertical-align: middle;
+	background: color-mix(in srgb, var(--background-modifier-border) 30%, var(--background-secondary));
+}
+
+.dmv-folded-label {
+	display: block;
+	writing-mode: vertical-rl;
+	transform: rotate(180deg);
+	font-size: 10px;
+	color: var(--text-faint);
+	font-style: italic;
+	white-space: nowrap;
+}
+
+.dmv-td-folded {
+	width: 22px;
+	min-width: 22px;
+	max-width: 26px;
+	padding: 0;
+	background: color-mix(in srgb, var(--background-modifier-border) 25%, transparent);
 }

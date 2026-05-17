@@ -108,7 +108,7 @@ class DecisionMatrixSettingsTab extends PluginSettingTab {
 				content: [
 					'---',
 					'title: Laptop A',
-					'cost: 8',
+					'cost: 1200',
 					'performance: 7',
 					'portability: 6',
 					'build_quality: 9',
@@ -123,7 +123,7 @@ class DecisionMatrixSettingsTab extends PluginSettingTab {
 				content: [
 					'---',
 					'title: Laptop B',
-					'cost: 6',
+					'cost: 950',
 					'performance: 9',
 					'portability: 4',
 					'build_quality: 8',
@@ -138,7 +138,7 @@ class DecisionMatrixSettingsTab extends PluginSettingTab {
 				content: [
 					'---',
 					'title: Laptop C',
-					'cost: 9',
+					'cost: 800',
 					'performance: 5',
 					'portability: 9',
 					'build_quality: 7',
@@ -153,7 +153,7 @@ class DecisionMatrixSettingsTab extends PluginSettingTab {
 				content: [
 					'---',
 					'title: Laptop D',
-					'cost: 4',
+					'cost: 1600',
 					'performance: 8',
 					'portability: 7',
 					'build_quality: 9',
@@ -174,6 +174,7 @@ class DecisionMatrixSettingsTab extends PluginSettingTab {
 			`        - file.folder == "${folderPath}"`,
 			'        - \'file.ext == "md"\'',
 			'        - file.name != this.file.name',
+			'        - \'file.name != "Laptop Decision"\'',
 			'    order:',
 			'      - title',
 			'      - cost',
@@ -181,15 +182,23 @@ class DecisionMatrixSettingsTab extends PluginSettingTab {
 			'      - portability',
 			'      - build_quality',
 			'      - battery',
+			'  - type: decision-matrix-rankings',
+			'    name: Laptop Rankings',
+			'    filters:',
+			'      and:',
+			`        - file.folder == "${folderPath}"`,
+			'        - \'file.ext == "md"\'',
+			'        - file.name != this.file.name',
+			'        - \'file.name != "Laptop Decision"\'',
 			'',
 		].join('\n');
 
-		// Decision note lives OUTSIDE the folder so it doesn't appear in query results.
+		// Decision note is excluded from query results by the base filter (file.name != "Laptop Decision").
 		// It embeds the base and provides weights via its frontmatter properties.
 		const decisionNote = [
 			'---',
 			'title: Laptop Decision',
-			'weight_cost: 3',
+			'weight_cost: -3',
 			'weight_performance: 5',
 			'weight_portability: 2',
 			'weight_build_quality: 4',
@@ -198,22 +207,28 @@ class DecisionMatrixSettingsTab extends PluginSettingTab {
 			'',
 			'# Laptop Decision',
 			'',
-			'My weighted criteria for choosing a laptop:',
-			'- **Performance** is most important (weight 5)',
-			'- **Build quality** matters a lot (weight 4)',
-			'- **Cost** and **Battery** are moderate (weight 3)',
-			'- **Portability** is nice-to-have (weight 2)',
+			'My weighted criteria for choosing a laptop.',
+			'`cost` is the actual price in USD — a higher price is worse, so it gets a **negative weight**.',
+			'Enable **Rank Raws** on the cost column to rank laptops by price rather than using the raw dollar value.',
+			'',
+			'| Criterion | Weight | Reason |',
+			'| --- | --- | --- |',
+			'| Performance | +5 | Most important |',
+			'| Build quality | +4 | Matters a lot |',
+			'| Battery | +3 | Important for travel |',
+			'| Portability | +2 | Nice-to-have |',
+			'| Cost (USD) | -3 | Higher price = penalised |',
 			'',
 			'## Decision Matrix',
 			'',
-			`![[${folderPath}/laptop-comparison.base]]`,
+			'![[laptop-comparison.base]]',
 			'',
 		].join('\n');
 
 		const allFiles = [
 			...notes.map(n => ({ path: `${folderPath}/${n.name}.md`, content: n.content })),
 			{ path: `${folderPath}/laptop-comparison.base`, content: baseContent },
-			{ path: 'Laptop Decision.md', content: decisionNote },
+			{ path: `${folderPath}/Laptop Decision.md`, content: decisionNote },
 		];
 
 		let created = 0;

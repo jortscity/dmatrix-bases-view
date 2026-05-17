@@ -1,24 +1,21 @@
-import { BasesView, BasesViewConfig, BasesEntryGroup, Modal, Notice, setIcon } from 'obsidian';
+import { BasesViewConfig, BasesEntryGroup } from 'obsidian';
 import type { QueryController } from 'obsidian';
 import type DecisionMatrixPlugin from './main.ts';
 import type { DecisionItem, ItemGroup, ScoreScale } from './types.ts';
-import { SCALES } from './types.ts';
 import { detectCriteria, detectCriteriaFromFiles, extractItem } from './field-mapping.ts';
-import { buildMatrixScaffold, renderRawTable, renderWeightedTable, computeRankedScores } from './renderer.ts';
+import { buildMatrixScaffold, renderRawTable, renderWeightedTable, computeRankedScores, renderToolbar, normalizeScores } from './renderer.ts';
+import { DecisionMatrixBaseView } from './base-view.ts';
 
-export class DecisionMatrixView extends BasesView {
+export class DecisionMatrixView extends DecisionMatrixBaseView {
 	type = 'decision-matrix';
 	private scrollEl: HTMLElement;
 	private rootEl: HTMLElement;
 	private plugin: DecisionMatrixPlugin;
 
-	// Session-only weights — never persisted. Initialized from embedding note
-	// frontmatter on first use of each criterion; overridable by the user at any time.
-	private _weights: Record<string, number> = {};
-	private _weightsFromNote = false;
 	private _collapsedGroups: Set<string> = new Set();
 	private _rankRawsColumns: Set<string> = new Set();
-	private _columnsFolded = false;
+	private _foldColsActive = false;
+	private _foldColsCount = 3;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: DecisionMatrixPlugin) {
 		super(controller);
@@ -87,12 +84,24 @@ export class DecisionMatrixView extends BasesView {
 		}
 
 		// Toolbar
-		this._renderToolbar(toolbar, items, criteria, scale, () => this._reloadWeightsFromNote(criteria));
+		renderToolbar(toolbar, {
+			currentScale: scale,
+			onScaleChange: (s) => { this.plugin.settings.scale = s; this.plugin.saveSettings(); this._render(); },
+			onReloadWeights: () => this._reloadWeightsFromNote(criteria),
+			foldColsActive: this._foldColsActive,
+			foldColsCount: this._foldColsCount,
+			onFoldToggle: () => { this._foldColsActive = !this._foldColsActive; this._render(); },
+			onFoldCountChange: (n) => { this._foldColsCount = n; if (this._foldColsActive) this._render(); },
+			rankRawsActive: this._rankRawsColumns.size > 0,
+			onNormalize: () => normalizeScores(this.app, items, criteria, scale),
+		});
 
 		const scorePrefix = this.plugin.settings.scorePrefix;
 
+		const foldedColCount = this._foldColsActive ? Math.min(this._foldColsCount, criteria.length) : 0;
+
 		// Raw scores table — hidden entirely when columns are folded
-		if (this._columnsFolded) {
+		if (foldedColCount > 0) {
 			rawSection.style.display = 'none';
 		}
 
@@ -115,15 +124,7 @@ export class DecisionMatrixView extends BasesView {
 			},
 			this._rankRawsColumns,
 			rankedScores,
-			(criterion, checked) => {
-				if (checked) {
-					this._rankRawsColumns.add(criterion);
-				} else {
-					this._rankRawsColumns.delete(criterion);
-				}
-				this._render();
-			},
-			this._columnsFolded,
+			foldedColCount,
 		);
 
 		// Weighted scores table
@@ -147,79 +148,16 @@ export class DecisionMatrixView extends BasesView {
 			},
 			this._rankRawsColumns,
 			rankedScores,
-			this._columnsFolded,
+			foldedColCount,
+			(criterion, checked) => {
+				if (checked) {
+					this._rankRawsColumns.add(criterion);
+				} else {
+					this._rankRawsColumns.delete(criterion);
+				}
+				this._render();
+			},
 		);
-	}
-
-	/**
-	 * For any criterion not yet in _weights, read weight_<criterion> from the
-	 * active file. Falls back to 1. Tracks whether the note supplied any weights.
-	 * Negative weights are allowed.
-	 */
-	private _initMissingWeights(criteria: string[]): void {
-		const activeFile = this.app.workspace.getActiveFile();
-		const fm = activeFile
-			? this.app.metadataCache.getFileCache(activeFile)?.frontmatter
-			: null;
-
-		let foundAny = this._weightsFromNote;
-
-		for (const c of criteria) {
-			if (this._weights[c] != null) continue; // already set this session
-
-			const fromNote = fm?.[`weight_${c}`];
-			if (fromNote != null) {
-				const n = Number(fromNote);
-				if (!isNaN(n)) {
-					this._weights[c] = n;
-					foundAny = true;
-					continue;
-				}
-			}
-			this._weights[c] = 1; // default
-		}
-
-		this._weightsFromNote = foundAny;
-	}
-
-	/**
-	 * Force-reload weights from the active file for the given criteria,
-	 * overwriting any in-session edits for criteria that have note props.
-	 */
-	private _reloadWeightsFromNote(criteria: string[]): void {
-		const activeFile = this.app.workspace.getActiveFile();
-		const fm = activeFile
-			? this.app.metadataCache.getFileCache(activeFile)?.frontmatter
-			: null;
-
-		let foundAny = false;
-		for (const c of criteria) {
-			const val = fm?.[`weight_${c}`];
-			if (val != null) {
-				const n = Number(val);
-				if (!isNaN(n)) {
-					this._weights[c] = n;
-					foundAny = true;
-				}
-			}
-		}
-
-		this._weightsFromNote = foundAny;
-
-		if (!foundAny) {
-			new Notice('No weight_* properties found on the active note.');
-		}
-		this._render();
-	}
-
-	/** Returns true if the currently active note has at least one weight_<criterion> property. */
-	private _hasNoteWeights(criteria: string[]): boolean {
-		const activeFile = this.app.workspace.getActiveFile();
-		const fm = activeFile
-			? this.app.metadataCache.getFileCache(activeFile)?.frontmatter
-			: null;
-		if (!fm) return false;
-		return criteria.some(c => fm[`weight_${c}`] != null);
 	}
 
 	private _openNote(item: DecisionItem, e?: MouseEvent): void {
@@ -227,153 +165,4 @@ export class DecisionMatrixView extends BasesView {
 		if (leaf) leaf.openFile(item.file);
 	}
 
-	private _renderToolbar(
-		toolbar: HTMLElement,
-		items: DecisionItem[],
-		criteria: string[],
-		currentScale: ScoreScale,
-		onReloadWeights: () => void,
-	): void {
-		// Scale button group
-		const scaleGroup = toolbar.createEl('div', { cls: 'dmv-scale-group' });
-		scaleGroup.createEl('span', { text: 'Scale:', cls: 'dmv-toolbar-label' });
-		for (const s of SCALES) {
-			const btn = scaleGroup.createEl('button', {
-				text: `/ ${s}`,
-				cls: s === currentScale ? 'dmv-scale-btn is-active' : 'dmv-scale-btn',
-			});
-			btn.addEventListener('click', () => {
-				if (s !== this.plugin.settings.scale) {
-					this.plugin.settings.scale = s;
-					this.plugin.saveSettings();
-					this._render();
-				}
-			});
-		}
-
-		toolbar.createEl('div', { cls: 'dmv-toolbar-separator' });
-
-		// Reload weights from embedding note
-		const reloadBtn = toolbar.createEl('button', {
-			cls: 'dmv-btn dmv-btn--icon',
-			attr: { title: 'Reload weights from embedding note frontmatter (weight_*)' },
-		});
-		setIcon(reloadBtn, 'refresh-cw');
-		reloadBtn.addEventListener('click', onReloadWeights);
-
-		toolbar.createEl('div', { cls: 'dmv-toolbar-separator' });
-
-		const foldColsBtn = toolbar.createEl('button', {
-			text: 'Fold Cols',
-			cls: this._columnsFolded ? 'dmv-btn dmv-btn--toggle is-active' : 'dmv-btn dmv-btn--toggle',
-			attr: { title: 'Hide score columns; keep Item, W.A., and Rank visible' },
-		});
-		foldColsBtn.addEventListener('click', () => {
-			this._columnsFolded = !this._columnsFolded;
-			this._render();
-		});
-
-		toolbar.createEl('div', { cls: 'dmv-toolbar-separator' });
-
-		// Normalize button — disabled while any Rank Raws columns are active
-		const anyRankRaws = this._rankRawsColumns.size > 0;
-		const normalizeBtn = toolbar.createEl('button', {
-			text: 'Normalize',
-			cls: anyRankRaws ? 'dmv-btn dmv-btn--disabled' : 'dmv-btn',
-			attr: {
-				title: anyRankRaws
-					? 'Disabled while Rank Raws is active'
-					: `Per-criterion: any value exceeding /${currentScale} is scaled down by that criterion's max`,
-			},
-		});
-		if (anyRankRaws) {
-			normalizeBtn.setAttribute('disabled', 'true');
-		} else {
-			normalizeBtn.addEventListener('click', async () => {
-				await this._normalizeScores(items, criteria, currentScale);
-			});
-		}
-	}
-
-	/**
-	 * Per-criterion normalization: for each criterion whose max value exceeds
-	 * targetScale, divide every score by that criterion's max and scale up to
-	 * targetScale. Criteria already within range are untouched.
-	 */
-	private async _normalizeScores(
-		items: DecisionItem[],
-		criteria: string[],
-		targetScale: ScoreScale,
-	): Promise<void> {
-		// Determine which criteria need normalization and by what factor
-		const scalingMap = new Map<string, number>(); // criterion → divisor
-		for (const c of criteria) {
-			let max = 0;
-			for (const item of items) {
-				const v = item.scores[c] ?? 0;
-				if (v > max) max = v;
-			}
-			if (max > targetScale) {
-				scalingMap.set(c, max);
-			}
-		}
-
-		if (scalingMap.size === 0) {
-			new Notice(`All scores are already within the /${targetScale} scale.`);
-			return;
-		}
-
-		const criteriaNames = [...scalingMap.keys()].join(', ');
-		const confirmed = await new Promise<boolean>(resolve => {
-			new NormalizeConfirmModal(
-				this.app,
-				`This will overwrite raw scores for ${scalingMap.size} criterion${scalingMap.size > 1 ? 'a' : ''}: ${criteriaNames}. This cannot be undone.`,
-				resolve,
-			).open();
-		});
-
-		if (!confirmed) return;
-
-		for (const item of items) {
-			await this.app.fileManager.processFrontMatter(item.file, (fm: Record<string, unknown>) => {
-				for (const [c, divisor] of scalingMap) {
-					const raw = item.scores[c];
-					if (raw == null) continue;
-					fm[c] = Math.max(0, Math.round((raw / divisor) * targetScale));
-				}
-			});
-		}
-
-		new Notice(`Normalized ${scalingMap.size} criterion${scalingMap.size > 1 ? 'a' : ''}: ${criteriaNames}`);
-	}
-}
-
-class NormalizeConfirmModal extends Modal {
-	private message: string;
-	private onSubmit: (confirmed: boolean) => void;
-
-	constructor(app: import('obsidian').App, message: string, onSubmit: (confirmed: boolean) => void) {
-		super(app);
-		this.message = message;
-		this.onSubmit = onSubmit;
-	}
-
-	onOpen(): void {
-		const { contentEl } = this;
-		contentEl.createEl('p', { text: this.message });
-		const btnRow = contentEl.createEl('div', { cls: 'modal-button-container' });
-		btnRow.createEl('button', { text: 'Cancel' }).addEventListener('click', () => {
-			this.onSubmit(false);
-			this.close();
-		});
-		const confirmBtn = btnRow.createEl('button', { text: 'Normalize', cls: 'mod-cta mod-warning' });
-		confirmBtn.addEventListener('click', () => {
-			this.onSubmit(true);
-			this.close();
-		});
-	}
-
-	onClose(): void {
-		this.contentEl.empty();
-	}
 }

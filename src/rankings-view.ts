@@ -1,9 +1,10 @@
-import { BasesView, BasesEntryGroup, Notice, setIcon } from 'obsidian';
+import { BasesEntryGroup, setIcon } from 'obsidian';
 import type { QueryController } from 'obsidian';
 import type DecisionMatrixPlugin from './main.ts';
 import type { DecisionItem, ItemGroup } from './types.ts';
 import { detectCriteriaFromFiles, extractItem } from './field-mapping.ts';
-import { computeRankedScores } from './renderer.ts';
+import { computeRankedScores, renderWeightedTable, renderToolbar, normalizeScores } from './renderer.ts';
+import { DecisionMatrixBaseView } from './base-view.ts';
 
 interface RankedItem {
 	item: DecisionItem;
@@ -12,14 +13,14 @@ interface RankedItem {
 	cover: string;
 }
 
-export class DecisionMatrixRankingsView extends BasesView {
+export class DecisionMatrixRankingsView extends DecisionMatrixBaseView {
 	type = 'decision-matrix-rankings';
 	private rootEl: HTMLElement;
 	private plugin: DecisionMatrixPlugin;
 
-	private _weights: Record<string, number> = {};
-	private _weightsFromNote = false;
-	private _rankRaws = false;
+	private _rankRawsColumns: Set<string> = new Set();
+	private _foldColsActive = false;
+	private _foldColsCount = 3;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: DecisionMatrixPlugin) {
 		super(controller);
@@ -54,36 +55,62 @@ export class DecisionMatrixRankingsView extends BasesView {
 		const items: DecisionItem[] = allEntries.map(entry => extractItem(entry, criteria));
 		const groups: ItemGroup[] = [{ key: '', items }];
 		const scale = this.plugin.settings.scale;
-		const rankedScores = this._rankRaws
+		const rankedScores = this._rankRawsColumns.size > 0
 			? computeRankedScores(groups, criteria, scale)
 			: undefined;
 		const ranked = this._rankItems(items, criteria, rankedScores);
 
+		const foldedColCount = this._foldColsActive ? Math.min(this._foldColsCount, criteria.length) : 0;
+
 		// Toolbar
 		const toolbar = container.createEl('div', { cls: 'dmv-toolbar' });
-		const reloadBtn = toolbar.createEl('button', {
-			cls: 'dmv-btn dmv-btn--icon',
-			attr: { title: 'Reload weights from embedding note frontmatter (weight_*)' },
-		});
-		setIcon(reloadBtn, 'refresh-cw');
-		reloadBtn.addEventListener('click', () => this._reloadWeightsFromNote(criteria));
-
-		toolbar.createEl('div', { cls: 'dmv-toolbar-separator' });
-
-		const rankRawsBtn = toolbar.createEl('button', {
-			text: 'Rank Raws',
-			cls: this._rankRaws ? 'dmv-btn dmv-btn--toggle is-active' : 'dmv-btn dmv-btn--toggle',
-			attr: { title: 'Rank each criterion relative to its column max; use ranks in weighted scoring' },
-		});
-		rankRawsBtn.addEventListener('click', () => {
-			this._rankRaws = !this._rankRaws;
-			this._render();
+		renderToolbar(toolbar, {
+			currentScale: scale,
+			onScaleChange: (s) => { this.plugin.settings.scale = s; this.plugin.saveSettings(); this._render(); },
+			onReloadWeights: () => this._reloadWeightsFromNote(criteria),
+			foldColsActive: this._foldColsActive,
+			foldColsCount: this._foldColsCount,
+			onFoldToggle: () => { this._foldColsActive = !this._foldColsActive; this._render(); },
+			onFoldCountChange: (n) => { this._foldColsCount = n; if (this._foldColsActive) this._render(); },
+			rankRawsActive: this._rankRawsColumns.size > 0,
+			onNormalize: () => normalizeScores(this.app, items, criteria, scale),
 		});
 
 		if (ranked.length === 0) {
 			container.createEl('div', { text: 'No items to rank.', cls: 'dmv-empty' });
 			return;
 		}
+
+		// Weighted scores table
+		const weightsFromNote = this._hasNoteWeights(criteria);
+		const tableSection = container.createEl('div', { cls: 'dmv-section dmr-table-section' });
+		renderWeightedTable(
+			tableSection,
+			groups,
+			criteria,
+			scale,
+			this._weights,
+			weightsFromNote,
+			(criterion, value) => {
+				this._weights[criterion] = value;
+				this._render();
+			},
+			(item, e) => this._openNote(item, e),
+			this.plugin.settings.scorePrefix,
+			new Set(),
+			undefined,
+			this._rankRawsColumns,
+			rankedScores,
+			foldedColCount,
+			(criterion, checked) => {
+				if (checked) {
+					this._rankRawsColumns.add(criterion);
+				} else {
+					this._rankRawsColumns.delete(criterion);
+				}
+				this._render();
+			},
+		);
 
 		const body = container.createEl('div', { cls: 'dmr-body' });
 		const maxAvg = ranked[0].avg;
@@ -132,7 +159,9 @@ export class DecisionMatrixRankingsView extends BasesView {
 		const ranked = rankedScores?.get(item.id);
 		for (const c of criteria) {
 			const w = this._weights[c] ?? 1;
-			const score = ranked ? (ranked[c] ?? 0) : (item.scores[c] ?? 0);
+			const score = (ranked && this._rankRawsColumns.has(c))
+				? (ranked[c] ?? 0)
+				: (item.scores[c] ?? 0);
 			sumWeighted += score * w;
 			sumAbsWeights += Math.abs(w);
 		}
@@ -243,54 +272,4 @@ export class DecisionMatrixRankingsView extends BasesView {
 		if (leaf) leaf.openFile(item.file);
 	}
 
-	private _initMissingWeights(criteria: string[]): void {
-		const activeFile = this.app.workspace.getActiveFile();
-		const fm = activeFile
-			? this.app.metadataCache.getFileCache(activeFile)?.frontmatter
-			: null;
-
-		let foundAny = this._weightsFromNote;
-
-		for (const c of criteria) {
-			if (this._weights[c] != null) continue;
-			const fromNote = fm?.[`weight_${c}`];
-			if (fromNote != null) {
-				const n = Number(fromNote);
-				if (!isNaN(n)) {
-					this._weights[c] = n;
-					foundAny = true;
-					continue;
-				}
-			}
-			this._weights[c] = 1;
-		}
-
-		this._weightsFromNote = foundAny;
-	}
-
-	private _reloadWeightsFromNote(criteria: string[]): void {
-		const activeFile = this.app.workspace.getActiveFile();
-		const fm = activeFile
-			? this.app.metadataCache.getFileCache(activeFile)?.frontmatter
-			: null;
-
-		let foundAny = false;
-		for (const c of criteria) {
-			const val = fm?.[`weight_${c}`];
-			if (val != null) {
-				const n = Number(val);
-				if (!isNaN(n)) {
-					this._weights[c] = n;
-					foundAny = true;
-				}
-			}
-		}
-
-		this._weightsFromNote = foundAny;
-
-		if (!foundAny) {
-			new Notice('No weight_* properties found on the active note.');
-		}
-		this._render();
-	}
 }

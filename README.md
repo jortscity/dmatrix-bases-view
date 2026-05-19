@@ -6,12 +6,11 @@ This plugin lets you build decision matrices inside [Obsidian Bases](https://hel
 
 - Two views: a scoring table with weighted totals and rankings, and a visual rankings view with a podium and card list
 - Click any score to edit it; changes save to the note's frontmatter straight away
-- Rows are ranked by weighted average; ties are detected
+- Rows are ranked by weighted average
 - An empty cell means you haven't scored it yet; a 0 means you deliberately gave it zero — both count as 0 in the calculation
 - Negative weights let you penalize criteria where a higher value is worse (e.g. cost, risk)
 - Rank Raws: when criteria are on incompatible scales (e.g. price in dollars vs. quality out of 10), you can convert a column's values to competition ranks before scoring. The ranked position is shown alongside the original value.
-- If a criterion's values exceed your scoring scale, they're normalized down automatically
-- Works with Bases' built-in row grouping; groups are collapsible
+- Collapsible row groups
 - Score out of 5, 10, or 100 — switchable per view
 
 ## Installation
@@ -19,8 +18,6 @@ This plugin lets you build decision matrices inside [Obsidian Bases](https://hel
 Requires Obsidian **1.9.10+** with Bases enabled.
 
 Search for **Decision Matrix Bases View** in Settings → Community Plugins.
-
-Alternatively, install via [BRAT](https://github.com/TfTHacker/obsidian42-brat) using `jortscity/dmatrix-bases-view`.
 
 ## Setup
 

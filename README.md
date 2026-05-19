@@ -23,6 +23,8 @@ Search for **Decision Matrix Bases View** in Settings → Community Plugins.
 
 **The fastest way to get started:** go to Settings → Decision Matrix and hit **Create examples**. It drops a ready-to-use folder into your vault — four notes, a base file, and a decision note with weights already configured. Open it and you'll see both views in action.
 
+![Decision Matrix example](assets/screenshot.png)
+
 ### How it works
 
 The view pulls scores from any notes in your vault. The only requirement is that those notes have **numeric properties** — those automatically become your scoring criteria.

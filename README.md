@@ -1,20 +1,18 @@
 # Decision Matrix Bases View
 
-A custom [Obsidian Bases](https://help.obsidian.md/bases) view for weighted decision-making. Score options across criteria, set weights, get ranked results.
+This plugin lets you build decision matrices inside [Obsidian Bases](https://help.obsidian.md/bases). A decision matrix combines your raw scores for different options across various criteria with how much each criterion matters to you — giving you an objective framework for making a choice.
 
 ## Features
 
-- **Two view types** — `decision-matrix` (full scoring table) and `decision-matrix-rankings` (podium + ranked card list)
-- **Inline score editing** — click any cell to edit; written back to frontmatter immediately
-- **Weighted scoring** — per-criterion weights, weighted average, ranked rows with tie detection
-- **Blank vs. zero** — unset scores display blank; explicit 0 is a deliberate judgment. Both treat as 0 in calculations.
-- **Weight pre-fill** — add `weight_<criterion>: N` to the embedding note's frontmatter; weights load on open and reset via the ↺ button
-- **Negative weights** — penalize criteria; denominator uses `Σ|weight|` so scale stays consistent
-- **Score prefix stripping** — set a prefix (e.g. `score_`) in settings to strip it from display names
-- **Rank Raws** — per-column checkboxes in the Raw Scores table header row; enable per-criterion to convert that column's raw values into competition ranks before weighted scoring. Useful when criteria are on incompatible scales (e.g. price in dollars vs. quality 1–10). Ranked value is shown prominently with the raw score below for reference.
-- **Per-criterion normalization** — scales only criteria whose max exceeds the target scale
-- **Row grouping** — uses Bases native grouping; groups are collapsible
-- **Scale toggle** — /5, /10, /100
+- Two views: a scoring table with weighted totals and rankings, and a visual rankings view with a podium and card list
+- Click any score to edit it; changes save to the note's frontmatter straight away
+- Rows are ranked by weighted average; ties are detected
+- An empty cell means you haven't scored it yet; a 0 means you deliberately gave it zero — both count as 0 in the calculation
+- Negative weights let you penalize criteria where a higher value is worse (e.g. cost, risk)
+- Rank Raws: when criteria are on incompatible scales (e.g. price in dollars vs. quality out of 10), you can convert a column's values to competition ranks before scoring. The ranked position is shown alongside the original value.
+- If a criterion's values exceed your scoring scale, they're normalized down automatically
+- Works with Bases' built-in row grouping; groups are collapsible
+- Score out of 5, 10, or 100 — switchable per view
 
 ## Installation
 
@@ -39,13 +37,6 @@ Use whatever property names make sense (`cost`, `quality`, `ease_of_use`). If yo
 **Keeping weights between sessions**
 
 Weights you set in the view are session-only by default. To make them stick, add `weight_<propertyname>` properties to the note that contains `![[yourfile.base]]` — for example, `weight_cost: 3`. The view loads those every time it opens, and you can reset to them at any time with the ↺ button.
-
-## Building
-
-```bash
-npm install
-npm run build
-```
 
 ## License
 

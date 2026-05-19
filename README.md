@@ -16,11 +16,9 @@ A custom [Obsidian Bases](https://help.obsidian.md/bases) view for weighted deci
 - **Row grouping** — uses Bases native grouping; groups are collapsible
 - **Scale toggle** — /5, /10, /100
 
-## Requirements
-
-Obsidian **1.9.10+** (Bases required)
-
 ## Installation
+
+Requires Obsidian **1.9.10+** with Bases enabled.
 
 Search for **Decision Matrix Bases View** in Settings → Community Plugins.
 
@@ -28,63 +26,19 @@ Alternatively, install via [BRAT](https://github.com/TfTHacker/obsidian42-brat) 
 
 ## Setup
 
-### Base file
+**The fastest way to get started:** go to Settings → Decision Matrix and hit **Create examples**. It drops a ready-to-use folder into your vault — four notes, a base file, and a decision note with weights already configured. Open it and you'll see both views in action.
 
-```yaml
-views:
-  - type: decision-matrix
-    name: My Decision
-    filters:
-      and:
-        - file.folder == "Options"
-        - 'file.ext == "md"'
-        - file.name != this.file.name
-    order:
-      - title
-      - cost
-      - performance
-      - quality
-```
+### How it works
 
-Any property in `order` with numeric values becomes a scoring criterion.
+The view pulls scores from any notes in your vault. The only requirement is that those notes have **numeric properties** — those automatically become your scoring criteria.
 
-### Scores
+**Naming your properties**
 
-```yaml
----
-title: Option A
-cost: 8
-performance: 7
-quality: 9
----
-```
+Use whatever property names make sense (`cost`, `quality`, `ease_of_use`). If you want to keep them grouped with a shared prefix in your vault (e.g. `score_cost`, `score_quality`), set that prefix in Settings and the view strips it from column headers automatically.
 
-### Weights
+**Keeping weights between sessions**
 
-Embed the base in a note and add `weight_<criterion>` properties:
-
-```yaml
----
-weight_cost: 3
-weight_performance: 5
-weight_quality: 4
----
-
-![[my-decision.base]]
-```
-
-Weights are session-only. Edit them live in the view, or hit ↺ to reload from frontmatter.
-
-### Rankings view
-
-Same setup, different view type:
-
-```yaml
-views:
-  - type: decision-matrix-rankings
-```
-
-Add a `cover` URL property to notes for thumbnail images in the podium cards.
+Weights you set in the view are session-only by default. To make them stick, add `weight_<propertyname>` properties to the note that contains `![[yourfile.base]]` — for example, `weight_cost: 3`. The view loads those every time it opens, and you can reset to them at any time with the ↺ button.
 
 ## Building
 

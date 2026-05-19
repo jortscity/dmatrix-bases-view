@@ -22,7 +22,9 @@ Obsidian **1.9.10+** (Bases required)
 
 ## Installation
 
-Via [BRAT](https://github.com/TfTHacker/obsidian42-brat): add `jortscity/dmatrix-bases-view` as a beta plugin.
+Search for **Decision Matrix Bases View** in Settings → Community Plugins.
+
+Alternatively, install via [BRAT](https://github.com/TfTHacker/obsidian42-brat) using `jortscity/dmatrix-bases-view`.
 
 ## Setup
 

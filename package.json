@@ -1,6 +1,6 @@
 {
 	"name": "decision-matrix-bases-view",
-	"version": "0.7.2",
+	"version": "0.7.3",
 	"description": "A weighted decision matrix view for Bases. Score options across criteria, apply weights, and see ranked results.",
 	"main": "main.js",
 	"scripts": {

@@ -1,95 +1,41 @@
 # Decision Matrix Bases View
 
-A custom [Obsidian Bases](https://help.obsidian.md/bases) view for weighted decision-making. Score options across criteria, set weights, get ranked results.
+This plugin lets you build decision matrices inside [Obsidian Bases](https://help.obsidian.md/bases). A decision matrix combines your raw scores for different options across various criteria with how much each criterion matters to you — giving you an objective framework for making a choice.
 
 ## Features
 
-- **Two view types** — `decision-matrix` (full scoring table) and `decision-matrix-rankings` (podium + ranked card list)
-- **Inline score editing** — click any cell to edit; written back to frontmatter immediately
-- **Weighted scoring** — per-criterion weights, weighted average, ranked rows with tie detection
-- **Blank vs. zero** — unset scores display blank; explicit 0 is a deliberate judgment. Both treat as 0 in calculations.
-- **Weight pre-fill** — add `weight_<criterion>: N` to the embedding note's frontmatter; weights load on open and reset via the ↺ button
-- **Negative weights** — penalize criteria; denominator uses `Σ|weight|` so scale stays consistent
-- **Score prefix stripping** — set a prefix (e.g. `score_`) in settings to strip it from display names
-- **Rank Raws** — per-column checkboxes in the Raw Scores table header row; enable per-criterion to convert that column's raw values into competition ranks before weighted scoring. Useful when criteria are on incompatible scales (e.g. price in dollars vs. quality 1–10). Ranked value is shown prominently with the raw score below for reference.
-- **Per-criterion normalization** — scales only criteria whose max exceeds the target scale
-- **Row grouping** — uses Bases native grouping; groups are collapsible
-- **Scale toggle** — /5, /10, /100
-
-## Requirements
-
-Obsidian **1.9.10+** (Bases required)
+- Two views: a scoring table with weighted totals and rankings, and a visual rankings view with a podium and card list
+- Click any score to edit it; changes save to the note's frontmatter straight away
+- Rows are ranked by weighted average
+- An empty cell means you haven't scored it yet; a 0 means you deliberately gave it zero — both count as 0 in the calculation
+- Negative weights let you penalize criteria where a higher value is worse (e.g. cost, risk)
+- Rank Raws: when criteria are on incompatible scales (e.g. price in dollars vs. quality out of 10), you can convert a column's values to competition ranks before scoring. The ranked position is shown alongside the original value.
+- Collapsible row groups
+- Score out of 5, 10, or 100 — switchable per view
 
 ## Installation
 
-Via [BRAT](https://github.com/TfTHacker/obsidian42-brat): add `jortscity/dmatrix-bases-view` as a beta plugin.
+Requires Obsidian **1.9.10+** with Bases enabled.
+
+Search for **Decision Matrix Bases View** in Settings → Community Plugins.
 
 ## Setup
 
-### Base file
+**The fastest way to get started:** go to Settings → Decision Matrix and hit **Create examples**. It drops a ready-to-use folder into your vault — four notes, a base file, and a decision note with weights already configured. Open it and you'll see both views in action.
 
-```yaml
-views:
-  - type: decision-matrix
-    name: My Decision
-    filters:
-      and:
-        - file.folder == "Options"
-        - 'file.ext == "md"'
-        - file.name != this.file.name
-    order:
-      - title
-      - cost
-      - performance
-      - quality
-```
+![Decision Matrix example](assets/screenshot.png)
 
-Any property in `order` with numeric values becomes a scoring criterion.
+### How it works
 
-### Scores
+The view pulls scores from any notes in your vault. The only requirement is that those notes have **numeric properties** — those automatically become your scoring criteria.
 
-```yaml
----
-title: Option A
-cost: 8
-performance: 7
-quality: 9
----
-```
+**Naming your properties**
 
-### Weights
+Use whatever property names make sense (`cost`, `quality`, `ease_of_use`). If you want to keep them grouped with a shared prefix in your vault (e.g. `score_cost`, `score_quality`), set that prefix in Settings and the view strips it from column headers automatically.
 
-Embed the base in a note and add `weight_<criterion>` properties:
+**Keeping weights between sessions**
 
-```yaml
----
-weight_cost: 3
-weight_performance: 5
-weight_quality: 4
----
-
-![[my-decision.base]]
-```
-
-Weights are session-only. Edit them live in the view, or hit ↺ to reload from frontmatter.
-
-### Rankings view
-
-Same setup, different view type:
-
-```yaml
-views:
-  - type: decision-matrix-rankings
-```
-
-Add a `cover` URL property to notes for thumbnail images in the podium cards.
-
-## Building
-
-```bash
-npm install
-npm run build
-```
+Weights you set in the view are session-only by default. To make them stick, add `weight_<propertyname>` properties to the note that contains `![[yourfile.base]]` — for example, `weight_cost: 3`. The view loads those every time it opens, and you can reset to them at any time with the ↺ button.
 
 ## License
 
